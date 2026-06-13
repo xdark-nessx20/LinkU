@@ -13,18 +13,26 @@ The project is in planning phase with docs in `DOCS/`.
 - **Frontend**: React
 
 ## Key docs
-- `DOCS/spec-unimag-match-mvp.md` — feature spec with 4 user stories (P1–P3), entities, and edge cases. Several items marked `[NEEDS CLARIFICATION]` (auth method, data retention, skill taxonomy).
+- `DOCS/specs/spec-unimag-match-mvp.md` — feature spec with 4 user stories (P1–P3), entities, and edge cases. Several items marked `[NEEDS CLARIFICATION]` (auth method, data retention, skill taxonomy).
 - `DOCS/UNIMAG Match.md` — full academic proposal/thesis. Long; prefer the spec for implementation.
-- `DOCS/spec-template.md` — template for new feature specs.
-- `DOCS/plan-template.md` — template for implementation plans.
+- `DOCS/specs/spec-template.md` — template for new feature specs.
+- `DOCS/plans/plan-template.md` — template for implementation plans.
 
 ### Backend specs (Phase 1 — spec planning)
-- `DOCS/spec-backend-01-auth.md` — Auth & user management (P1, blocks all others)
-- `DOCS/spec-backend-02-student-profile.md` — Student profile CRUD (P1, depends on auth)
-- `DOCS/spec-backend-03-project-need.md` — Project/need CRUD (P1, depends on auth)
-- `DOCS/spec-backend-04-matching-engine.md` — Matching algorithm & rankings (P1, depends on profile + project)
-- `DOCS/spec-backend-05-match-interactions.md` — Match lifecycle & notifications (P1, depends on matching)
-- `DOCS/spec-backend-06-network-data.md` — Collaboration graph data queries (P3, depends on matches)
+- `DOCS/specs/spec-backend-01-auth.md` — Auth & user management (P1, blocks all others)
+- `DOCS/specs/spec-backend-02-student-profile.md` — Student profile CRUD (P1, depends on auth)
+- `DOCS/specs/spec-backend-03-project-need.md` — Project/need CRUD (P1, depends on auth)
+- `DOCS/specs/spec-backend-04-matching-engine.md` — Matching algorithm & rankings (P1, depends on profile + project)
+- `DOCS/specs/spec-backend-05-match-interactions.md` — Match lifecycle & notifications (P1, depends on matching)
+- `DOCS/specs/spec-backend-06-network-data.md` — Collaboration graph data queries (P3, depends on matches)
+
+### Backend plans (Phase 2 — plan planning)
+- `DOCS/plans/plan-backend-01-auth.md`
+- `DOCS/plans/plan-backend-02-student-profile.md`
+- `DOCS/plans/plan-backend-03-project-need.md`
+- `DOCS/plans/plan-backend-04-matching-engine.md`
+- `DOCS/plans/plan-backend-05-match-interactions.md`
+- `DOCS/plans/plan-backend-06-network-data.md`
 
 ## Architecture
 - Monolithic with layers (no microservices). Single deployable, one port.

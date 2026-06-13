@@ -16,14 +16,14 @@ En fase de planificación. Documentación de especificaciones en `DOCS/`. Sin c�
 
 ## Documentación
 
-- `DOCS/spec-unimag-match-mvp.md` — especificación funcional del MVP
+- `DOCS/specs/spec-unimag-match-mvp.md` — especificación funcional del MVP
 - `DOCS/UNIMAG Match.md` — propuesta académica completa
-- `DOCS/spec-backend-01-auth.md` — especificación de autenticación y usuarios
-- `DOCS/spec-backend-02-student-profile.md` — especificación de perfiles de estudiante
-- `DOCS/spec-backend-03-project-need.md` — especificación de proyectos y necesidades
-- `DOCS/spec-backend-04-matching-engine.md` — especificación del motor de matching
-- `DOCS/spec-backend-05-match-interactions.md` — especificación de interacciones
-- `DOCS/spec-backend-06-network-data.md` — especificación de datos de red
+- `DOCS/specs/spec-backend-01-auth.md` — especificación de autenticación y usuarios
+- `DOCS/specs/spec-backend-02-student-profile.md` — especificación de perfiles de estudiante
+- `DOCS/specs/spec-backend-03-project-need.md` — especificación de proyectos y necesidades
+- `DOCS/specs/spec-backend-04-matching-engine.md` — especificación del motor de matching
+- `DOCS/specs/spec-backend-05-match-interactions.md` — especificación de interacciones
+- `DOCS/specs/spec-backend-06-network-data.md` — especificación de datos de red
 
 ## Arquitectura
 

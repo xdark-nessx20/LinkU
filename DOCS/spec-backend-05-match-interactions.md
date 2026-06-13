@@ -1,0 +1,126 @@
+# Feature Specification: Backend — Gestión de Interacciones (Match)
+
+**Created**: 2026-06-13
+**Depends on**: `spec-backend-04-matching-engine.md` (requiere puntajes calculados), `spec-backend-01-auth.md`
+**Maps to MVP**: User Story 2 (marcar "me interesa"), User Story 3 (notificación al responsable)
+
+## User Scenarios & Testing *(mandatory)*
+
+### User Story 1 — Marcar interés en un proyecto o estudiante (Priority: P1)
+
+Como usuario del sistema (estudiante o responsable), quiero marcar "me interesa" sobre una recomendación, para iniciar una conexión con la otra parte.
+
+**Why this priority**: Es la acción que convierte una recomendación pasiva en una interacción real. Sin esto, el sistema solo muestra puntajes pero no facilita conexiones.
+
+**Independent Test**: Puede probarse con un estudiante y un proyecto existentes, ejecutando la acción "me interesa" desde las recomendaciones del estudiante, y verificando que se crea un registro de Match con estado "interesado" y que el responsable recibe visibilidad de ese interés.
+
+**Acceptance Scenarios**:
+
+1. **Scenario**: Estudiante marca interés en un proyecto
+   - **Given** un estudiante visualizando un proyecto recomendado con 75% de coincidencia
+   - **When** hace clic en "Me interesa / Match"
+   - **Then** el sistema crea un Match con estado "interesado", asociando estudiante y proyecto, y notifica al responsable del proyecto
+
+2. **Scenario**: Responsable marca interés en un estudiante
+   - **Given** un responsable visualizando un estudiante recomendado para su proyecto
+   - **When** hace clic en "Me interesa" sobre ese estudiante
+   - **Then** el sistema crea un Match con estado "interesado" y notifica al estudiante
+
+3. **Scenario**: No se puede marcar interés dos veces
+   - **Given** un Match ya existente entre estudiante A y proyecto X (cualquier estado)
+   - **When** el estudiante A intenta marcar "me interesa" nuevamente en el proyecto X
+   - **Then** el sistema rechaza la acción indicando que ya existe una interacción previa con ese proyecto
+
+---
+
+### User Story 2 — Aceptar o rechazar un match recibido (Priority: P1)
+
+Como usuario que recibe una notificación de interés, quiero aceptar o rechazar el match, para confirmar la conexión o descartarla.
+
+**Why this priority**: Completa el ciclo de interacción. Sin aceptar/rechazar, los matches quedan en estado "interesado" indefinidamente sin resolución.
+
+**Independent Test**: Con un match en estado "interesado", el receptor acepta y se verifica que el estado cambia a "aceptado". Con otro match, el receptor rechaza y se verifica el cambio a "rechazado".
+
+**Acceptance Scenarios**:
+
+1. **Scenario**: Aceptar un match recibido
+   - **Given** un responsable que recibió un match "interesado" del estudiante A para su proyecto X
+   - **When** el responsable revisa el match y hace clic en "Aceptar"
+   - **Then** el sistema cambia el estado a "aceptado", notifica al estudiante A, y muestra datos de contacto [NEEDS CLARIFICATION: ¿qué información de contacto se comparte? ¿Email, nombre completo, o solo una notificación en plataforma?]
+
+2. **Scenario**: Rechazar un match recibido
+   - **Given** un estudiante que recibió un match "interesado" del proyecto Y
+   - **When** el estudiante revisa el match y hace clic en "Rechazar"
+   - **Then** el sistema cambia el estado a "rechazado" y registra que este par (estudiante, proyecto) no debe ser sugerido nuevamente mientras los datos no cambien significativamente
+
+3. **Scenario**: Match rechazado no se vuelve a sugerir
+   - **Given** un match en estado "rechazado" entre estudiante A y proyecto X
+   - **When** el estudiante A solicita sus recomendaciones nuevamente
+   - **Then** el proyecto X no aparece en la lista de recomendaciones
+
+4. **Scenario**: Match rechazado se vuelve a sugerir si los datos cambian
+   - **Given** un match rechazado entre estudiante A y proyecto X
+   - **When** el estudiante A agrega nuevas habilidades a su perfil o el proyecto X modifica sus requisitos
+   - **Then** el sistema puede volver a sugerir el proyecto X al estudiante A porque las condiciones cambiaron [NEEDS CLARIFICATION: ¿cuánto deben cambiar los datos para reactivar la sugerencia? ¿Cualquier cambio o un cambio significativo?]
+
+---
+
+### User Story 3 — Ver historial de matches y estados (Priority: P2)
+
+Como usuario, quiero ver una lista de todos mis matches (enviados y recibidos) con su estado actual, para dar seguimiento a mis interacciones.
+
+**Why this priority**: Es una vista de utilidad, pero el sistema funciona sin ella si las notificaciones son claras. No bloquea el flujo principal de matching.
+
+**Independent Test**: Con varios matches en distintos estados, el usuario accede a su historial y verifica que todos aparecen con el estado correcto.
+
+**Acceptance Scenarios**:
+
+1. **Scenario**: Historial de matches de un estudiante
+   - **Given** un estudiante con 3 matches: uno "interesado" (enviado), uno "aceptado", uno "rechazado"
+   - **When** accede a "Mis matches"
+   - **Then** el sistema muestra los 3 matches agrupados por estado o en orden cronológico inverso
+
+2. **Scenario**: Historial de matches de un responsable
+   - **Given** un responsable con proyectos que tienen matches en distintos estados
+   - **When** accede a "Matches recibidos"
+   - **Then** el sistema muestra los matches agrupados por proyecto, con el estado de cada uno
+
+---
+
+### Edge Cases
+
+- **Match rechazado por ambas partes**: Ambas partes rechazan; el match permanece en estado "rechazado" y no se vuelve a sugerir.
+- **Match expirado sin respuesta**: [NEEDS CLARIFICATION: ¿los matches "interesado" expiran después de un tiempo? El MVP spec no define expiración. Si no expiran, un match puede quedar sin respuesta indefinidamente.]
+- **Un usuario elimina su cuenta con matches activos**: Los matches donde participa el usuario eliminado deben anonimizarse o eliminarse (FR-AUTH-008 en spec-backend-01-auth).
+- **Notificaciones**: [NEEDS CLARIFICATION: ¿las notificaciones son solo dentro de la plataforma (in-app) o también por correo electrónico? Esto depende de la infraestructura disponible.]
+- **Cambio de estado "confirmado"**: ¿Un match "aceptado" puede pasar a "rechazado" posteriormente? [NEEDS CLARIFICATION: el MVP spec menciona estados sugerido/interesado/confirmado/rechazado pero no especifica si "confirmado" es un estado final o reversible.]
+
+## Requirements *(mandatory)*
+
+### Functional Requirements
+
+- **FR-INT-001**: El sistema MUST permitir a un estudiante marcar "me interesa" sobre un proyecto recomendado, creando un registro de Match con estado "interesado".
+- **FR-INT-002**: El sistema MUST permitir a un responsable de proyecto marcar "me interesa" sobre un estudiante recomendado, creando un registro de Match con estado "interesado".
+- **FR-INT-003**: El sistema MUST evitar la creación de matches duplicados entre el mismo estudiante y proyecto (máximo un Match por par).
+- **FR-INT-004**: El sistema MUST permitir al receptor de un match "interesado" aceptarlo (estado → "aceptado") o rechazarlo (estado → "rechazado").
+- **FR-INT-005**: El sistema MUST excluir de futuras recomendaciones los pares (estudiante, proyecto) que tengan un match en estado "rechazado", a menos que los datos del estudiante o del proyecto hayan cambiado significativamente [NEEDS CLARIFICATION: definir "cambio significativo"].
+- **FR-INT-006**: El sistema MUST notificar a la parte receptora cuando se crea un nuevo match "interesado". [NEEDS CLARIFICATION: método de notificación.]
+- **FR-INT-007**: El sistema MUST notificar a la parte iniciadora cuando su match es aceptado o rechazado. [NEEDS CLARIFICATION: método de notificación.]
+- **FR-INT-008**: El sistema MUST permitir a cada usuario ver el historial de sus matches (enviados y recibidos), con estado y fecha de cada uno.
+- **FR-INT-009**: El sistema MUST registrar la fecha y hora de cada cambio de estado del match (created_at, updated_at, responded_at).
+- **FR-INT-010**: El sistema MUST aplicar el principio de supervisión humana (FR-011 del MVP spec): ningún match "aceptado" genera acciones automáticas; la conexión es una sugerencia que ambas partes deben revisar.
+
+### Key Entities
+
+- **Match**: Representa una interacción entre un estudiante y un proyecto. Atributos: student_id (FK a StudentProfile), project_id (FK a Project), status (enum: sugerido | interesado | aceptado | rechazado), initiated_by (enum: estudiante | responsable), match_score (porcentaje al momento de la interacción), created_at, updated_at. Restricción: unique(student_id, project_id).
+- **Notification**: Representa una notificación generada por el sistema. Atributos: user_id (FK a User, destinatario), match_id (FK a Match), type (enum: nuevo_interes | match_aceptado | match_rechazado), message (texto), is_read (boolean), created_at. [NEEDS CLARIFICATION: ¿se persisten en base de datos o son solo en memoria? Si se persisten, se necesita mecanismo de limpieza.]
+
+## Success Criteria *(mandatory)*
+
+### Measurable Outcomes
+
+- **SC-INT-001**: Un usuario puede marcar "me interesa" en menos de 2 segundos desde que visualiza la recomendación.
+- **SC-INT-002**: El sistema rechaza el 100% de intentos de crear matches duplicados para el mismo par (estudiante, proyecto).
+- **SC-INT-003**: El 100% de matches en estado "rechazado" se excluyen de futuras recomendaciones (mientras los datos no cambien).
+- **SC-INT-004**: El 100% de las acciones de aceptar/rechazar generan una notificación visible para la otra parte en la plataforma.
+- **SC-INT-005**: La tasa de aceptación de matches (proporción de matches "interesado" que reciben respuesta) se registra como métrica para la fase piloto (meta base: ≥60% según documento UNIMAG Match).

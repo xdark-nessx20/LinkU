@@ -1,1 +1,30 @@
 # LinkU
+
+**UNIMAG Match** — sistema inteligente de emparejamiento académico que conecta estudiantes, proyectos, semilleros y facultades de la Universidad del Magdalena a partir del análisis de habilidades, intereses y necesidades.
+
+## Qué hace
+
+- Permite a estudiantes crear perfiles con sus habilidades, intereses, experiencia y disponibilidad.
+- Permite a proyectos y semilleros registrar sus necesidades de colaboración.
+- Calcula coincidencias entre estudiantes y proyectos usando un motor de puntuación basado en reglas.
+- Recomienda estudiantes a proyectos y proyectos a estudiantes, explicando los factores de cada match.
+- Visualiza la red de colaboración interdisciplinaria entre facultades.
+
+## Estado actual
+
+En fase de planificación. Documentación de especificaciones en `DOCS/`. Sin código aún.
+
+## Documentación
+
+- `DOCS/spec-unimag-match-mvp.md` — especificación funcional del MVP
+- `DOCS/UNIMAG Match.md` — propuesta académica completa
+- `DOCS/spec-backend-01-auth.md` — especificación de autenticación y usuarios
+- `DOCS/spec-backend-02-student-profile.md` — especificación de perfiles de estudiante
+- `DOCS/spec-backend-03-project-need.md` — especificación de proyectos y necesidades
+- `DOCS/spec-backend-04-matching-engine.md` — especificación del motor de matching
+- `DOCS/spec-backend-05-match-interactions.md` — especificación de interacciones
+- `DOCS/spec-backend-06-network-data.md` — especificación de datos de red
+
+## Arquitectura
+
+Monolito con capas (sin microservicios, sin API REST). Aplicación web renderizada en servidor.

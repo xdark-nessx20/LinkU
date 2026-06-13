@@ -1,6 +1,7 @@
 # Feature Specification: Backend — Autenticación y Gestión de Usuarios
 
 **Created**: 2026-06-13
+**Tech Stack**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Security
 **Depends on**: Ninguno (prerrequisito para todos los demás módulos del backend)
 
 ## User Scenarios & Testing *(mandatory)*
@@ -121,13 +122,13 @@ Como usuario registrado, quiero poder eliminar mi cuenta y todos mis datos asoci
 
 - **FR-AUTH-001**: El sistema MUST permitir el registro de usuarios con email, contraseña y rol (estudiante, responsable), exigiendo consentimiento informado obligatorio con registro de fecha y hora de aceptación.
 - **FR-AUTH-002**: El sistema MUST rechazar registros con email duplicado o sin consentimiento informado.
-- **FR-AUTH-003**: El sistema MUST almacenar contraseñas usando un algoritmo de hashing seguro con sal (bcrypt, argon2 o equivalente). [NEEDS CLARIFICATION: algoritmo específico no decidido]
-- **FR-AUTH-004**: El sistema MUST iniciar y mantener sesiones de usuario mediante [NEEDS CLARIFICATION: mecanismo de sesión no definido — cookies server-side, JWT en cookies, sesiones en base de datos, etc.]
+- **FR-AUTH-003**: El sistema MUST almacenar contraseñas usando BCryptPasswordEncoder de Spring Security con sal (bcrypt).
+- **FR-AUTH-004**: El sistema MUST iniciar y mantener sesiones de usuario mediante Spring Security con sesiones server-side (HttpSession).
 - **FR-AUTH-005**: El sistema MUST proteger todas las rutas que requieran autenticación, redirigiendo al login si no hay sesión activa.
 - **FR-AUTH-006**: El sistema MUST permitir el cierre de sesión destruyendo la sesión activa.
 - **FR-AUTH-007**: El sistema SHOULD permitir la recuperación de contraseña [NEEDS CLARIFICATION: método específico — email, pregunta de seguridad, etc.]
 - **FR-AUTH-008**: El sistema MUST permitir a un usuario eliminar su cuenta junto con todos sus datos asociados (perfil, matches, notificaciones), previa confirmación explícita.
-- **FR-AUTH-009**: El sistema MUST validar que el email tenga un formato válido y que la contraseña cumpla con un mínimo de [NEEDS CLARIFICATION: longitud mínima y política de complejidad de contraseñas no definidas]
+- **FR-AUTH-009**: El sistema MUST validar que el email tenga un formato válido y que la contraseña cumpla con un mínimo de 8 caracteres. [NEEDS CLARIFICATION: política de complejidad adicional — ¿requerir mayúsculas, números, caracteres especiales?]
 - **FR-AUTH-010**: El sistema MUST mostrar mensajes de error genéricos en login y recuperación de contraseña que no revelen si el email existe o no en la base de datos (anti-enumeración).
 
 ### Key Entities

@@ -5,8 +5,12 @@ UNIMAG Match — intelligent academic matching system that connects students, pr
 MVP is a web app with: student profiles, project/need registration, match scoring, recommendations, and a collaboration network graph.
 
 ## Current state
-No code, build system, tests, or CI yet. Tech stack and language not chosen.
+No code, build system, tests, or CI yet.
 The project is in planning phase with docs in `DOCS/`.
+
+## Tech Stack
+- **Backend**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Security, Spring Data JPA
+- **Frontend**: React
 
 ## Key docs
 - `DOCS/spec-unimag-match-mvp.md` — feature spec with 4 user stories (P1–P3), entities, and edge cases. Several items marked `[NEEDS CLARIFICATION]` (auth method, data retention, skill taxonomy).
@@ -23,7 +27,8 @@ The project is in planning phase with docs in `DOCS/`.
 - `DOCS/spec-backend-06-network-data.md` — Collaboration graph data queries (P3, depends on matches)
 
 ## Architecture
-- Monolithic with layers (no microservices, no REST API). Server-rendered web app.
+- Monolithic with layers (no microservices). Single deployable, one port.
+- Server-rendered HTML for full pages (Thymeleaf). Internal JSON endpoints for dynamic data consumed by React components (search, rankings, graph). No separate API service or REST layer — just `@Controller` for pages and `@ResponseBody`/`@RestController`-style controllers for JSON.
 - 1 Feature = 1 Spec = 1 Plan.
 
 ## Conventions
@@ -32,7 +37,6 @@ The project is in planning phase with docs in `DOCS/`.
 - Spec template requires `NEEDS CLARIFICATION` markers for unresolved decisions.
 
 ## Before writing code
-- Choose tech stack and document it (the spec suggests Python, Google Forms, Excel, Power BI, Figma as prototype tools, but nothing is settled).
-- Resolve all `[NEEDS CLARIFICATION]` items in the spec.
+- Resolve remaining `[NEEDS CLARIFICATION]` items in the specs.
 - Create an implementation plan using `DOCS/plan-template.md`.
-- Update this file with build/test/lint commands once established.
+- Update this file with build/test/lint commands once established (e.g., `mvnw test`, `mvnw spring-boot:run`).

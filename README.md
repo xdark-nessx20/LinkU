@@ -27,4 +27,11 @@ En fase de planificación. Documentación de especificaciones en `DOCS/`. Sin c�
 
 ## Arquitectura
 
-Monolito con capas (sin microservicios, sin API REST). Aplicación web renderizada en servidor.
+Monolito con capas (sin microservicios). Una sola aplicación, un solo puerto.
+
+- El backend (Spring Boot) sirve páginas HTML completas (Thymeleaf) e endpoints JSON internos para datos dinámicos.
+- El frontend (React) consume esos endpoints JSON para funcionalidades interactivas (búsquedas, rankings, grafo).
+- No hay una capa REST separada ni API externa — solo endpoints internos.
+
+**Backend**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Security, Spring Data JPA.  
+**Frontend**: React.

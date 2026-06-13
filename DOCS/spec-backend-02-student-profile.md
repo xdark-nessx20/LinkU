@@ -1,6 +1,7 @@
 # Feature Specification: Backend — Gestión de Perfiles de Estudiante
 
 **Created**: 2026-06-13
+**Tech Stack**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Data JPA
 **Depends on**: `spec-backend-01-auth.md` (requiere autenticación y rol "estudiante")
 **Maps to MVP**: User Story 1 — Crear y gestionar perfil de estudiante
 
@@ -108,15 +109,15 @@ Como usuario del sistema, quiero ver mi propio perfil y consultar el directorio 
 - **FR-PROF-003**: El sistema MUST permitir editar cualquier campo del perfil en cualquier momento, registrando la fecha de última actualización.
 - **FR-PROF-004**: El sistema MUST validar que los campos obligatorios (nombre, facultad, programa) no estén vacíos al crear o editar el perfil.
 - **FR-PROF-005**: El sistema MUST mantener una relación uno-a-uno entre User (rol estudiante) y StudentProfile. Un usuario no puede tener más de un perfil.
-- **FR-PROF-006**: El sistema MUST permitir consultar el directorio de perfiles con filtros por facultad, programa, o habilidad. [NEEDS CLARIFICATION: ¿paginación? Con muestra piloto de 120 estudiantes puede no ser necesaria, pero debe considerarse para escalabilidad.]
+- **FR-PROF-006**: El sistema MUST permitir consultar el directorio de perfiles con filtros por facultad, programa, o habilidad mediante un endpoint JSON interno (`@RestController`). Se usará Spring Data JPA con paginación (Pageable) para escalabilidad.
 - **FR-PROF-007**: El sistema MUST mostrar un mensaje al estudiante con perfil incompleto indicando qué campos faltan para recibir mejores recomendaciones, cuando intente acceder a la sección de recomendaciones.
 - **FR-PROF-008**: El sistema MUST asociar habilidades a categorías predefinidas para normalización, según la taxonomía definida en [NEEDS CLARIFICATION: taxonomía de habilidades no definida — ver spec-unimag-match-mvp.md Edge Cases. La propuesta del proyecto incluye 8 categorías: Tecnología y datos, Comunicación y divulgación, Investigación, Diseño y creatividad, Emprendimiento y gestión, Bienestar y sociedad, Ambiente y territorio, Cultura e identidad.]
 - **FR-PROF-009**: El sistema MUST registrar la fecha de creación y la fecha de última actualización del perfil (requerido por FR-012 del MVP spec para soporte de desempate en recomendaciones).
 
 ### Key Entities
 
-- **StudentProfile**: Representa el perfil académico de un estudiante. Atributos: user_id (FK a User, único), full_name, faculty, program, semester, skills (lista de habilidades, cada una opcionalmente vinculada a una SkillCategory), interests (lista de áreas de interés), prior_experience (texto), tools (lista), availability (texto/opciones), preferred_role (texto/opciones), is_complete (boolean), created_at, updated_at.
-- **SkillCategory**: Representa una categoría de habilidades dentro de la taxonomía. Atributos: name, description. [NEEDS CLARIFICATION: ¿las categorías son fijas (seed data) o administrables?] Relaciona habilidades de estudiantes con áreas de matching.
+- **StudentProfile**: Representa el perfil académico de un estudiante. Atributos: user_id (FK a User, único), full_name, faculty, program, semester, skills (lista de habilidades, cada una opcionalmente vinculada a una SkillCategory), interests (lista de áreas de interés), prior_experience (texto), tools (lista), availability (texto/opciones), preferred_role (texto/opciones), is_complete (boolean), created_at, updated_at. Mapeado como entidad JPA con @Entity, relaciones con @OneToOne, @ManyToMany según corresponda.
+- **SkillCategory**: Representa una categoría de habilidades dentro de la taxonomía. Atributos: name, description. [NEEDS CLARIFICATION: ¿las categorías son fijas (seed data cargada con data.sql de Spring) o administrables?] Relaciona habilidades de estudiantes con áreas de matching.
 
 ## Success Criteria *(mandatory)*
 

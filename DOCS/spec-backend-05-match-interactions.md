@@ -1,6 +1,7 @@
 # Feature Specification: Backend — Gestión de Interacciones (Match)
 
 **Created**: 2026-06-13
+**Tech Stack**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Data JPA
 **Depends on**: `spec-backend-04-matching-engine.md` (requiere puntajes calculados), `spec-backend-01-auth.md`
 **Maps to MVP**: User Story 2 (marcar "me interesa"), User Story 3 (notificación al responsable)
 
@@ -104,16 +105,16 @@ Como usuario, quiero ver una lista de todos mis matches (enviados y recibidos) c
 - **FR-INT-003**: El sistema MUST evitar la creación de matches duplicados entre el mismo estudiante y proyecto (máximo un Match por par).
 - **FR-INT-004**: El sistema MUST permitir al receptor de un match "interesado" aceptarlo (estado → "aceptado") o rechazarlo (estado → "rechazado").
 - **FR-INT-005**: El sistema MUST excluir de futuras recomendaciones los pares (estudiante, proyecto) que tengan un match en estado "rechazado", a menos que los datos del estudiante o del proyecto hayan cambiado significativamente [NEEDS CLARIFICATION: definir "cambio significativo"].
-- **FR-INT-006**: El sistema MUST notificar a la parte receptora cuando se crea un nuevo match "interesado". [NEEDS CLARIFICATION: método de notificación.]
-- **FR-INT-007**: El sistema MUST notificar a la parte iniciadora cuando su match es aceptado o rechazado. [NEEDS CLARIFICATION: método de notificación.]
+- **FR-INT-006**: El sistema MUST notificar a la parte receptora cuando se crea un nuevo match "interesado". Notificación in-app persistida en base de datos (entidad Notification). [NEEDS CLARIFICATION: ¿también notificación por correo electrónico? Depende de infraestructura de email.]
+- **FR-INT-007**: El sistema MUST notificar a la parte iniciadora cuando su match es aceptado o rechazado. Notificación in-app persistida en base de datos (entidad Notification). [NEEDS CLARIFICATION: ¿también notificación por correo electrónico?]
 - **FR-INT-008**: El sistema MUST permitir a cada usuario ver el historial de sus matches (enviados y recibidos), con estado y fecha de cada uno.
 - **FR-INT-009**: El sistema MUST registrar la fecha y hora de cada cambio de estado del match (created_at, updated_at, responded_at).
 - **FR-INT-010**: El sistema MUST aplicar el principio de supervisión humana (FR-011 del MVP spec): ningún match "aceptado" genera acciones automáticas; la conexión es una sugerencia que ambas partes deben revisar.
 
 ### Key Entities
 
-- **Match**: Representa una interacción entre un estudiante y un proyecto. Atributos: student_id (FK a StudentProfile), project_id (FK a Project), status (enum: sugerido | interesado | aceptado | rechazado), initiated_by (enum: estudiante | responsable), match_score (porcentaje al momento de la interacción), created_at, updated_at. Restricción: unique(student_id, project_id).
-- **Notification**: Representa una notificación generada por el sistema. Atributos: user_id (FK a User, destinatario), match_id (FK a Match), type (enum: nuevo_interes | match_aceptado | match_rechazado), message (texto), is_read (boolean), created_at. [NEEDS CLARIFICATION: ¿se persisten en base de datos o son solo en memoria? Si se persisten, se necesita mecanismo de limpieza.]
+- **Match**: Representa una interacción entre un estudiante y un proyecto. Atributos: student_id (FK a StudentProfile), project_id (FK a Project), status (enum: sugerido | interesado | aceptado | rechazado), initiated_by (enum: estudiante | responsable), match_score (porcentaje al momento de la interacción), created_at, updated_at. Restricción: unique(student_id, project_id). Mapeado como entidad JPA con @Entity, @ManyToOne, @Table(uniqueConstraints = ...).
+- **Notification**: Representa una notificación in-app persistida en PostgreSQL. Atributos: user_id (FK a User, destinatario), match_id (FK a Match), type (enum: nuevo_interes | match_aceptado | match_rechazado), message (texto), is_read (boolean), created_at. Entidad JPA mapeada con @Entity.
 
 ## Success Criteria *(mandatory)*
 

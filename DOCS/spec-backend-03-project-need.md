@@ -1,6 +1,7 @@
 # Feature Specification: Backend — Gestión de Proyectos y Necesidades
 
 **Created**: 2026-06-13
+**Tech Stack**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Data JPA
 **Depends on**: `spec-backend-01-auth.md` (requiere autenticación y rol "responsable")
 **Maps to MVP**: User Story 3 — Recomendación de perfiles a organizaciones/proyectos (parte de registro)
 
@@ -105,12 +106,12 @@ Como usuario del sistema (estudiante o responsable), quiero consultar el directo
 - **FR-PROY-004**: El sistema MUST asociar cada proyecto a un usuario responsable (relación uno-a-muchos: un responsable puede tener múltiples proyectos).
 - **FR-PROY-005**: El sistema MUST validar que los campos obligatorios (nombre, descripción) no estén vacíos al crear o editar.
 - **FR-PROY-006**: El sistema MUST registrar la fecha de creación y última actualización de cada proyecto (requerido por FR-012 del MVP spec).
-- **FR-PROY-007**: El sistema MUST permitir consultar el directorio de proyectos activos con filtros por facultad, área temática o habilidad requerida.
+- **FR-PROY-007**: El sistema MUST permitir consultar el directorio de proyectos activos con filtros por facultad, área temática o habilidad requerida, mediante un endpoint JSON interno (`@RestController`).
 - **FR-PROY-008**: El sistema MUST indicar al responsable cuando un proyecto activo no recibe coincidencias por encima del umbral mínimo [NEEDS CLARIFICATION: ¿umbral definido en spec-backend-04-matching], sugiriendo ampliar los criterios de búsqueda.
 
 ### Key Entities
 
-- **Project**: Representa un proyecto, semillero, organización o vacante que busca colaboradores. Atributos: owner_id (FK a User), name, description, required_skills (lista, vinculada a SkillCategory), role_type, related_faculty, phase, expected_availability, main_objective, expected_output, is_active (boolean, default true), created_at, updated_at.
+- **Project**: Representa un proyecto, semillero, organización o vacante que busca colaboradores. Atributos: owner_id (FK a User), name, description, required_skills (lista, vinculada a SkillCategory), role_type, related_faculty, phase, expected_availability, main_objective, expected_output, is_active (boolean, default true), created_at, updated_at. Mapeado como entidad JPA con @Entity, @ManyToOne a User, @ManyToMany a SkillCategory.
 
 ## Success Criteria *(mandatory)*
 

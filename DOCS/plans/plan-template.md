@@ -44,25 +44,25 @@ specs/[feature]/
 -->
 
 ```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
 backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
+├── build.gradle.kts
+├── src/main/java/com/unimag/match/
+│   ├── domain/
+│   │   ├── model/           # Domain entities (no framework annotations)
+│   │   ├── service/         # Domain service interfaces
+│   │   └── port/            # Port interfaces (repositories, etc.)
+│   ├── application/
+│   │   ├── service/         # Use case implementations
+│   │   └── dto/             # DTOs, request/response objects
+│   └── infrastructure/
+│       ├── config/          # SecurityWebFilterChain, JWT, CORS, Flyway
+│       ├── persistence/     # R2DBC repository implementations
+│       └── web/             # @RestController (Mono<ResponseEntity<T>>)
+├── src/main/resources/
+│   ├── db/migration/        # Flyway SQL migrations (V1__, V2__, ...)
+│   ├── static/              # React SPA build output
+│   └── application.properties
+└── src/test/
 
 frontend/
 ├── src/
@@ -108,12 +108,12 @@ directories captured above]
 
 Examples of foundational tasks (adjust based on your project):
 
-- [ ] T004 Setup database schema and migrations framework
-- [ ] T005 Implement authentication/authorization framework
-- [ ] T006 Setup API routing and middleware structure
-- [ ] T007 Create base models/entities that all stories depend on
-- [ ] T008 Configure error handling and logging infrastructure
-- [ ] T009 Setup environment configuration management
+- [ ] T004 Setup database schema with Flyway migration scripts
+- [ ] T005 Implement authentication/authorization framework (JWT + SecurityWebFilterChain)
+- [ ] T006 Setup REST API controller structure with global error handling
+- [ ] T007 Create base domain entities and port interfaces that all stories depend on
+- [ ] T008 Configure CORS, logging, and validation infrastructure
+- [ ] T009 Setup environment configuration management (application.properties)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -127,17 +127,17 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Tests for User Story 1 
 
-- [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T010 [P] [US1] Contract test for [use case] in test/domain/[usecase]Test.java
+- [ ] T011 [P] [US1] Integration test for [user journey] in test/infrastructure/web/[controller]Test.java
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Create [Entity1] model in src/models/[entity1].py
-- [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py
-- [ ] T014 [US1] Implement [Service] in src/services/[service].py (depends on T012, T013)
-- [ ] T015 [US1] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T016 [US1] Add validation and error handling
-- [ ] T017 [US1] Add logging for user story 1 operations
+- [ ] T012 [P] [US1] Create [Entity1] domain model in domain/model/[entity1].java
+- [ ] T013 [P] [US1] Create [Entity1] port interface in domain/port/[entity1]Repository.java
+- [ ] T014 [US1] Implement [Service] in application/service/[service].java (depends on T012, T013)
+- [ ] T015 [US1] Implement [RestController] in infrastructure/web/[controller].java (Mono<ResponseEntity<T>>)
+- [ ] T016 [US1] Create Flyway migration V[N]__create_[table].sql
+- [ ] T017 [US1] Add validation, error handling, and API error responses
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -151,14 +151,14 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Tests for User Story 2 
 
-- [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T018 [P] [US2] Contract test for [use case] in test/domain/[usecase]Test.java
+- [ ] T019 [P] [US2] Integration test for [user journey] in test/infrastructure/web/[controller]Test.java
 
 ### Implementation for User Story 2
 
-- [ ] T020 [P] [US2] Create [Entity] model in src/models/[entity].py
-- [ ] T021 [US2] Implement [Service] in src/services/[service].py
-- [ ] T022 [US2] Implement [endpoint/feature] in src/[location]/[file].py
+- [ ] T020 [P] [US2] Create [Entity] domain model in domain/model/[entity].java
+- [ ] T021 [US2] Implement [Service] in application/service/[service].java
+- [ ] T022 [US2] Implement [RestController] in infrastructure/web/[controller].java
 - [ ] T023 [US2] Integrate with User Story 1 components (if needed)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
@@ -173,14 +173,14 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Tests for User Story 3 
 
-- [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T024 [P] [US3] Contract test for [use case] in test/domain/[usecase]Test.java
+- [ ] T025 [P] [US3] Integration test for [user journey] in test/infrastructure/web/[controller]Test.java
 
 ### Implementation for User Story 3
 
-- [ ] T026 [P] [US3] Create [Entity] model in src/models/[entity].py
-- [ ] T027 [US3] Implement [Service] in src/services/[service].py
-- [ ] T028 [US3] Implement [endpoint/feature] in src/[location]/[file].py
+- [ ] T026 [P] [US3] Create [Entity] domain model in domain/model/[entity].java
+- [ ] T027 [US3] Implement [Service] in application/service/[service].java
+- [ ] T028 [US3] Implement [RestController] in infrastructure/web/[controller].java
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -221,8 +221,9 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Within Each User Story
 
-- Models before services
-- Services before endpoints
+- Port interfaces before adapters
+- Domain models before application services
+- Application services before REST controllers
 - Core implementation before integration
 - Story complete before moving to next priority
 - Tests after implementation
@@ -231,6 +232,8 @@ Examples of foundational tasks (adjust based on your project):
 
 - [Story] label maps task to specific user story for traceability
 - Each user story should be independently completable and testable
+- All controllers return `Mono<ResponseEntity<T>>` (WebFlux reactive)
+- No Thymeleaf, no server-rendered pages — 100% REST API
 - Verify tests pass
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently

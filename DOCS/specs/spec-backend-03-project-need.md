@@ -1,7 +1,7 @@
 # Feature Specification: Backend — Gestión de Proyectos y Necesidades
 
 **Created**: 2026-06-13
-**Tech Stack**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Data JPA
+**Tech Stack**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Data R2DBC
 **Depends on**: `spec-backend-01-auth.md` (requiere autenticación y rol "responsable")
 **Maps to MVP**: User Story 3 — Recomendación de perfiles a organizaciones/proyectos (parte de registro)
 
@@ -67,19 +67,19 @@ Como usuario del sistema (estudiante o responsable), quiero consultar el directo
 
 **Why this priority**: Complementa las recomendaciones automáticas con descubrimiento manual. Menos prioritario que el registro de proyectos porque sin proyectos creados no hay nada que mostrar.
 
-**Independent Test**: Puede probarse con varios proyectos creados, aplicando filtros, y verificando que los resultados son correctos.
+**Independent Test**: Puede probarse con varios proyectos creados, llamando a los endpoints REST (GET /api/projects con query params), y verificando que las respuestas JSON son correctas.
 
 **Acceptance Scenarios**:
 
 1. **Scenario**: Listado de proyectos activos
    - **Given** varios proyectos en la base de datos, algunos activos y otros inactivos
-   - **When** un usuario accede al directorio de proyectos
-   - **Then** el sistema muestra únicamente los proyectos activos, ordenados por fecha de creación (más recientes primero)
+   - **When** un cliente realiza una petición GET /api/projects?isActive=true
+   - **Then** el sistema responde con JSON paginado que contiene únicamente los proyectos activos, ordenados por fecha de creación (más recientes primero)
 
 2. **Scenario**: Filtro por facultad
    - **Given** proyectos de distintas facultades
-   - **When** un usuario filtra por "Facultad de Ingeniería"
-   - **Then** el sistema muestra solo los proyectos de esa facultad
+   - **When** un cliente realiza una petición GET /api/projects?faculty=Ingeniería
+   - **Then** el sistema responde con JSON paginado que contiene solo los proyectos de esa facultad
 
 3. **Scenario**: Proyecto sin coincidencias suficientes
    - **Given** un proyecto activo con requisitos muy específicos para los cuales ningún estudiante tiene match superior al umbral mínimo
@@ -106,12 +106,12 @@ Como usuario del sistema (estudiante o responsable), quiero consultar el directo
 - **FR-PROY-004**: El sistema MUST asociar cada proyecto a un usuario responsable (relación uno-a-muchos: un responsable puede tener múltiples proyectos).
 - **FR-PROY-005**: El sistema MUST validar que los campos obligatorios (nombre, descripción) no estén vacíos al crear o editar.
 - **FR-PROY-006**: El sistema MUST registrar la fecha de creación y última actualización de cada proyecto (requerido por FR-012 del MVP spec).
-- **FR-PROY-007**: El sistema MUST permitir consultar el directorio de proyectos activos con filtros por facultad, área temática o habilidad requerida, mediante un endpoint JSON interno (`@RestController`).
+- **FR-PROY-007**: El sistema MUST exponer un endpoint REST GET /api/projects con parámetros de consulta opcionales (faculty, skill, phase, isActive) para consultar el directorio de proyectos con paginación. La respuesta es JSON paginado.
 - **FR-PROY-008**: El sistema MUST indicar al responsable cuando un proyecto activo no recibe coincidencias por encima del umbral mínimo [NEEDS CLARIFICATION: ¿umbral definido en spec-backend-04-matching], sugiriendo ampliar los criterios de búsqueda.
 
 ### Key Entities
 
-- **Project**: Representa un proyecto, semillero, organización o vacante que busca colaboradores. Atributos: owner_id (FK a User), name, description, required_skills (lista, vinculada a SkillCategory), role_type, related_faculty, phase, expected_availability, main_objective, expected_output, is_active (boolean, default true), created_at, updated_at. Mapeado como entidad JPA con @Entity, @ManyToOne a User, @ManyToMany a SkillCategory.
+- **Project**: Representa un proyecto, semillero, organización o vacante que busca colaboradores. Atributos: owner_id (FK a User), name, description, required_skills (lista, vinculada a SkillCategory), role_type, related_faculty, phase, expected_availability, main_objective, expected_output, is_active (boolean, default true), created_at, updated_at. La relación con User es muchos-a-uno (un responsable puede tener múltiples proyectos). La relación con SkillCategory es muchos-a-muchos via tabla de unión.
 
 ## Success Criteria *(mandatory)*
 
@@ -119,4 +119,4 @@ Como usuario del sistema (estudiante o responsable), quiero consultar el directo
 
 - **SC-PROY-001**: Un responsable puede crear un proyecto/necesidad (campos obligatorios) en menos de 3 minutos.
 - **SC-PROY-002**: El 100% de proyectos inactivos se excluyen del directorio y del cálculo de coincidencias.
-- **SC-PROY-003**: El directorio de proyectos filtra y devuelve resultados en menos de 2 segundos para la muestra piloto (25 proyectos).
+- **SC-PROY-003**: El endpoint GET /api/projects filtra y devuelve resultados en menos de 2 segundos para la muestra piloto (25 proyectos).

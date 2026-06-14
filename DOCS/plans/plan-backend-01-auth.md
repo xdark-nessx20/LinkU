@@ -10,38 +10,38 @@ Implementar registro de usuarios con consentimiento informado, inicio/cierre de 
 ## Technical Context
 
 **Language/Version**: Java 21
-**Primary Dependencies**: Spring Boot 3.x, Spring Security, Spring Data JPA, Lombok, Thymeleaf
-**Storage**: PostgreSQL (entidad User, sesiones en memoria vía HttpSession)
+**Primary Dependencies**: Spring Boot 3.x, Spring Security, Spring Data R2DBC, Lombok, Flyway
+**Storage**: PostgreSQL (entidad User, sin sesiones server-side (JWT stateless))
 **Testing**: JUnit 5, Mockito, Spring Boot Test, H2 (tests)
-**Target Platform**: Server (Spring Boot embedded Tomcat, one port)
-**Project Type**: web (monolith with layers)
+**Target Platform**: Server (Spring Boot WebFlux on Netty, one port)
+**Project Type**: web (hexagonal with ports & adapters)
 
 ## Project Structure
 
 ```text
 src/main/java/com/unimag/match/
-├── config/
-│   └── SecurityConfig.java
-├── controller/
-│   └── AuthController.java          # GET/POST login, register, logout (HTML pages)
-├── model/
-│   └── User.java                    # @Entity: email, passwordHash, role, consentGiven, consentDate
-├── repository/
-│   └── UserRepository.java          # findByEmail, existsByEmail
-├── service/
-│   └── UserService.java             # register, authenticate, deleteAccount
-└── dto/
-    └── RegistrationForm.java        # Form backing object with validation
+├── domain/
+│   ├── model/
+│   │   └── User.java                    # Domain entity: email, passwordHash, role, consentGiven, consentDate
+│   └── port/
+│       └── UserRepository.java          # Port interface: findByEmail, existsByEmail
+├── application/
+│   ├── service/
+│   │   └── UserService.java             # Use case: register, authenticate, deleteAccount
+│   └── dto/
+│       └── RegistrationForm.java        # Form backing object with validation
+└── infrastructure/
+    ├── config/
+    │   └── SecurityConfig.java          # SecurityWebFilterChain, ReactiveUserDetailsService
+    ├── persistence/
+    │   └── R2dbcUserRepository.java     # R2DBC impl of UserRepository port
+    └── web/
+        └── AuthRestController.java      # @RestController: POST /api/auth/*
 
 src/main/resources/
-├── templates/
-│   ├── auth/
-│   │   ├── login.html              # Thymeleaf
-│   │   ├── register.html
-│   │   └── password-recovery.html
-│   └── ...
-├── application.properties
-└── data.sql
+├── db/migration/
+│   └── V1__create_users.sql             # Flyway migration
+├── application.yml
 
 src/test/java/com/unimag/match/
 └── ...
@@ -49,9 +49,9 @@ src/test/java/com/unimag/match/
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-- [ ] T001 Create Spring Boot project with Spring Initializr (Spring Web, Security, Data JPA, PostgreSQL, Thymeleaf, Lombok, Validation)
-- [ ] T002 Configure application.properties (PostgreSQL connection, server port, Thymeleaf)
-- [ ] T003 Configure SecurityConfig with basic form-login and BCryptPasswordEncoder bean
+- [ ] T001 Create Spring Boot project with Gradle (Spring WebFlux, Security, Data R2DBC, PostgreSQL, Lombok, Validation, Flyway)
+- [ ] T002 Configure application.properties (R2DBC PostgreSQL connection, server port, CORS, Flyway)
+- [ ] T003 Configure SecurityConfig as SecurityWebFilterChain with JWT token generation and validation, and BCryptPasswordEncoder bean
 
 ---
 
@@ -59,12 +59,13 @@ src/test/java/com/unimag/match/
 
 **Purpose**: User entity and repository that ALL other modules depend on.
 
-- [ ] T004 Create User entity: email (unique, not null), passwordHash, role (enum ESTUDIANTE/RESPONSABLE), consentGiven, consentDate, createdAt, updatedAt
-- [ ] T005 Create UserRepository: findByEmail, existsByEmail
-- [ ] T006 Configure SecurityConfig to use UserRepository via UserDetailsService
-- [ ] T007 Create RegistrationForm DTO with validation (@Email, @NotBlank, @Size(min=8), consentGiven must be true)
-- [ ] T008 Create templates/auth/register.html (Thymeleaf form with consent checkbox)
-- [ ] T009 Create templates/auth/login.html
+- [ ] T004 Create V1__create_users.sql Flyway migration (email, password_hash, role, consent_given, consent_date, created_at, updated_at)
+- [ ] T005 Create User domain entity in domain/model/User.java (pure domain object)
+- [ ] T006 Create UserRepository port interface in domain/port/UserRepository.java (findByEmail, existsByEmail)
+- [ ] T007 Create R2dbcUserRepository adapter in infrastructure/persistence/R2dbcUserRepository.java
+- [ ] T008 Configure SecurityConfig to use ReactiveUserDetailsService backed by UserRepository
+- [ ] T009 Create RegistrationForm DTO in application/dto/RegistrationForm.java with validation (@Email, @NotBlank, @Size(min=8), consentGiven must be true)
+- [ ] T010 Create AuthRestController basic skeleton in infrastructure/web/AuthRestController.java
 
 ---
 
@@ -83,10 +84,10 @@ src/test/java/com/unimag/match/
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Implement AuthController.showRegister (GET) and AuthController.register (POST)
+- [ ] T014 [US1] Implement AuthRestController.register (POST /api/auth/register): valida body JSON, returns Mono<ResponseEntity<AuthResponse>> con JWT
 - [ ] T015 [US1] Implement UserService.register: validate, hash password with BCryptPasswordEncoder, persist User
 - [ ] T016 [US1] Add server-side validation for duplicate email and consent checkbox
-- [ ] T017 [US1] Add success/error flash messages in Thymeleaf
+- [ ] T017 [US1] Add validation error responses in JSON format (400 Bad Request con campo "errors")
 
 ---
 
@@ -105,11 +106,11 @@ src/test/java/com/unimag/match/
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Configure SecurityConfig: loginPage("/login"), loginProcessingUrl("/login"), defaultSuccessUrl based on role
-- [ ] T023 [US2] Implement UserDetailsService loading User from UserRepository
-- [ ] T024 [US2] Implement logout: logoutUrl("/logout"), invalidateHttpSession(true), deleteCookies("JSESSIONID")
-- [ ] T025 [US2] Add generic error message on failed login (no email/user distinction)
-- [ ] T026 [US2] Configure HTTP security: permitAll on /login, /register, /css/**, /js/**; authenticated for everything else
+- [ ] T022 [US2] Configure SecurityWebFilterChain: disable formLogin, enable stateless JWT auth, configure JWT filter
+- [ ] T023 [US2] Implement ReactiveUserDetailsService loading User from UserRepository port for JWT authentication
+- [ ] T024 [US2] Implement POST /api/auth/login: authenticate credentials, generate JWT, return AuthResponse
+- [ ] T025 [US2] Implement POST /api/auth/logout: invalidate JWT (add to deny list or blacklist)
+- [ ] T026 [US2] Configure CORS and CSRF (disable CSRF for REST API, configure CORS for React dev server)
 
 ---
 
@@ -136,7 +137,7 @@ src/test/java/com/unimag/match/
 ### Implementation for User Story 4
 
 - [ ] T030 [US4] Implement AuthController.deleteAccount (POST) con confirmación
-- [ ] T031 [US4] Implement UserService.deleteAccount: @Transactional, cascada a StudentProfile, Matches, Notifications
+- [ ] T031 [US4] Implement UserService.deleteAccount: reactive transaction, cascada a StudentProfile, Matches, Notifications
 - [ ] T032 [US4] Add confirmation page/template before delete
 - [ ] T033 [US4] Test que email queda liberado para nuevo registro después de delete
 
@@ -157,6 +158,7 @@ src/test/java/com/unimag/match/
 
 - [US1] label maps task to User Story 1 for traceability
 - Each user story independently testable
-- BCryptPasswordEncoder bean in SecurityConfig, auto-injected
-- Flash attributes for form validation errors in Thymeleaf
+- BCryptPasswordEncoder bean in SecurityConfig for password hashing and JWT login verification
+- Errores de API retornados como JSON con códigos HTTP apropiados (400, 401, 409, etc.)
+- Flyway migrations handle schema creation (no data.sql for DDL)
 - [NEEDS CLARIFICATION]: US3 depende de decisión sobre infraestructura de email

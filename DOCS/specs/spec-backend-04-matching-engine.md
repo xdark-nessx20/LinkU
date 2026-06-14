@@ -1,7 +1,7 @@
 # Feature Specification: Backend — Motor de Matching y Recomendación
 
 **Created**: 2026-06-13
-**Tech Stack**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Data JPA
+**Tech Stack**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Data R2DBC
 **Depends on**: `spec-backend-02-student-profile.md`, `spec-backend-03-project-need.md` (requiere perfiles y proyectos en la base de datos)
 **Maps to MVP**: User Story 2 (Match entre estudiantes y proyectos), User Story 3 (Recomendación de perfiles a organizaciones) — parte de cálculo
 
@@ -55,7 +55,7 @@ Como estudiante, quiero recibir una lista de proyectos recomendados ordenada por
 
 **Why this priority**: Es la salida principal del motor para el lado del estudiante. Materializa la promesa central: "conectar estudiantes con oportunidades".
 
-**Independent Test**: Con datos de prueba (1 estudiante, 5 proyectos con distintos grados de compatibilidad), se ejecuta el ranking y se verifica que: (a) el proyecto más compatible aparece primero, (b) cada recomendación incluye factores de coincidencia, (c) proyectos con 0% de coincidencia no aparecen.
+**Independent Test**: Con datos de prueba (1 estudiante, 5 proyectos con distintos grados de compatibilidad), llamando a GET /api/recommendations/student/{userId} y verificando que la respuesta JSON contiene: (a) el proyecto más compatible aparece primero, (b) cada recomendación incluye totalScore y scoreFactors, (c) proyectos con 0% de coincidencia no aparecen.
 
 **Acceptance Scenarios**:
 
@@ -82,7 +82,7 @@ Como responsable de proyecto, quiero recibir una lista de estudiantes recomendad
 
 **Why this priority**: Es la salida del motor para el lado del responsable. Cierra el ciclo bidireccional de recomendaciones.
 
-**Independent Test**: Con datos de prueba (1 proyecto, 5 estudiantes), se ejecuta el ranking inverso y se verifican los mismos criterios que en User Story 2.
+**Independent Test**: Con datos de prueba (1 proyecto, 5 estudiantes), llamando a GET /api/recommendations/project/{projectId} y verificando que la respuesta JSON contiene los mismos criterios que en User Story 2 (totalScore y scoreFactors).
 
 **Acceptance Scenarios**:
 
@@ -142,12 +142,12 @@ Como motor del sistema, debo reflejar los cambios en perfiles o proyectos en los
   - Puntaje máximo teórico: 100 puntos (100%).
   [NEEDS CLARIFICATION: ¿los +30 son por cada habilidad coincidente o una sola vez por el criterio? El documento sugiere "por habilidad coincidente", lo que implicaría que el puntaje puede superar 100 si hay múltiples habilidades coincidentes. Definir si hay un tope o se normaliza.]
 - **FR-MATCH-003**: El sistema MUST generar, para cada recomendación, un desglose de factores que explique el puntaje (transparencia algorítmica — FR-005 y FR-006 del MVP spec). Ejemplo: "+30 Python, +20 sostenibilidad = 50%".
-- **FR-MATCH-004**: El sistema MUST generar rankings ordenados por puntaje descendente para: (a) un estudiante → lista de proyectos, (b) un proyecto → lista de estudiantes. Estos rankings se exponen como endpoints JSON internos consumidos por el frontend React (no como páginas HTML separadas).
+- **FR-MATCH-004**: El sistema MUST generar rankings ordenados por puntaje descendente en los siguientes endpoints REST: (a) GET /api/recommendations/student/{userId} → lista de proyectos, (b) GET /api/recommendations/project/{projectId} → lista de estudiantes. Las respuestas son JSON con totalScore y scoreFactors por cada recomendación.
 - **FR-MATCH-005**: El sistema MUST excluir de los rankings los proyectos inactivos y los perfiles de estudiantes que hayan sido eliminados.
 - **FR-MATCH-006**: El sistema MUST excluir de los rankings los matches en estado "rechazado" entre el mismo estudiante y proyecto, siempre que los datos no hayan cambiado (ver spec-backend-05-match-interactions.md).
 - **FR-MATCH-007**: El sistema MUST indicar cuando un perfil de estudiante no tiene suficientes datos (sin habilidades ni intereses) y no generar recomendaciones en ese caso, mostrando un mensaje que invite a completar el perfil.
 - **FR-MATCH-008**: El sistema SHOULD permitir que las ponderaciones de los criterios de matching sean configurables mediante propiedades de Spring Boot (application.properties). Para el MVP, se usarán valores fijos: +30/+15/+20/+20/+15.
-- **FR-MATCH-009**: El sistema MUST procesar el cálculo de coincidencias para la muestra piloto (120 estudiantes × 25 proyectos = 3000 pares) en menos de 10 segundos usando Java 21 y consultas optimizadas de Spring Data JPA sobre PostgreSQL.
+- **FR-MATCH-009**: El sistema MUST procesar el cálculo de coincidencias para la muestra piloto (120 estudiantes × 25 proyectos = 3000 pares) en menos de 10 segundos usando Java 21 y consultas optimizadas de Spring Data R2DBC sobre PostgreSQL.
 - **FR-MATCH-010**: El sistema MUST aplicar criterios de desempate deterministas y explicables cuando dos recomendaciones tengan idéntico puntaje.
 
 ### Key Entities

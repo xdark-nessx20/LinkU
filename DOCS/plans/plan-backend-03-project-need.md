@@ -10,46 +10,48 @@ Implementar CRUD de proyectos/necesidades vinculados a un usuario responsable, c
 ## Technical Context
 
 **Language/Version**: Java 21
-**Primary Dependencies**: Spring Boot 3.x, Spring Data JPA, Lombok, Thymeleaf
-**Storage**: PostgreSQL (entidad Project, @ManyToOne a User, @ManyToMany a SkillCategory)
+**Primary Dependencies**: Spring Boot 3.x, Spring Data R2DBC, Lombok, Flyway
+**Storage**: PostgreSQL (entidad Project, join table para skills)
 **Testing**: JUnit 5, Mockito, Spring Boot Test, H2
-**Target Platform**: Server (Spring Boot embedded Tomcat)
-**Project Type**: web (monolith with layers)
+**Target Platform**: Server (Spring Boot WebFlux on Netty)
+**Project Type**: web (hexagonal with ports & adapters)
 
 ## Project Structure
 
 ```text
 src/main/java/com/unimag/match/
-├── controller/
-│   ├── ProjectController.java        # GET/POST HTML pages for project CRUD
-│   └── ProjectApiController.java     # @RestController: GET /api/projects (JSON directory)
-├── model/
-│   ├── Project.java                  # @Entity: ownerId (FK to User), name, description, requiredSkills (@ManyToMany SkillCategory), ...
-│   ├── User.java
-│   └── SkillCategory.java
-├── repository/
-│   └── ProjectRepository.java        # findByOwnerId, findAllByIsActiveTrue with Specification
-├── service/
-│   └── ProjectService.java           # create, update, toggleActive
-└── dto/
-    ├── ProjectForm.java              # Form backing object
-    └── ProjectDto.java               # JSON response DTO
+├── domain/
+│   ├── model/
+│   │   ├── Project.java               # Domain entity
+│   │   ├── User.java
+│   │   └── SkillCategory.java
+│   └── port/
+│       └── ProjectRepository.java     # Port interface
+├── application/
+│   ├── service/
+│   │   └── ProjectService.java        # Use case: create, update, toggleActive
+│   └── dto/
+│       ├── ProjectRequest.java         # Create/Update JSON request DTO
+│       └── ProjectResponse.java        # JSON response DTO
+└── infrastructure/
+    ├── persistence/
+    │   └── R2dbcProjectRepository.java  # R2DBC adapter
+    └── web/
+        └── ProjectRestController.java  # @RestController: GET/POST/PUT /api/projects/*
 
 src/main/resources/
-└── templates/
-    └── project/
-        ├── create.html
-        ├── edit.html
-        ├── view.html
-        └── list.html
+├── db/migration/
+│   └── V4__create_projects.sql        # Flyway migration
 ```
 
 ## Phase 1: Setup
 
 - [ ] T001 Verify dependencies and existing entities (User, SkillCategory) are accessible
-- [ ] T002 Create Project entity with all fields per spec: owner (@ManyToOne User), name (@NotBlank), description (@NotBlank), requiredSkills (@ManyToMany SkillCategory), roleType, relatedFaculty, phase, expectedAvailability, mainObjective, expectedOutput, isActive (boolean, default true), createdAt, updatedAt
-- [ ] T003 Create ProjectRepository with findByOwnerId, findByIsActiveTrue, JpaSpecificationExecutor
-- [ ] T004 Create ProjectForm DTO with validation
+- [ ] T002 Create V4__create_projects.sql Flyway migration (owner_id FK to users, name, description, required_skills via join table, role_type, related_faculty, phase, expected_availability, main_objective, expected_output, is_active, created_at, updated_at)
+- [ ] T003 Create Project domain entity in domain/model/Project.java
+- [ ] T004 Create ProjectRepository port interface in domain/port/ProjectRepository.java (findByOwnerId, findByIsActiveTrue with filtering)
+- [ ] T005 Create R2dbcProjectRepository adapter in infrastructure/persistence/
+- [ ] T006 Create ProjectRequest/ProjectResponse DTOs for JSON in application/dto/ with validation
 
 ---
 
@@ -68,10 +70,8 @@ src/main/resources/
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Implement ProjectController.showCreate (GET) — render create.html
-- [ ] T010 [US1] Implement ProjectController.create (POST) — validate, set owner from authenticated user, call ProjectService
-- [ ] T011 [US1] Implement ProjectService.create
-- [ ] T012 [US1] Create templates/project/create.html with form
+- [ ] T009 [US1] Implement ProjectRestController.create (POST /api/projects) — validate, set owner from authenticated user, call ProjectService
+- [ ] T010 [US1] Implement ProjectService.create
 
 ---
 
@@ -90,33 +90,28 @@ src/main/resources/
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Implement ProjectController.showEdit (GET) — verify ownership
-- [ ] T018 [US2] Implement ProjectController.update (POST) — validate, update
-- [ ] T019 [US2] Implement ProjectController.toggleActive (POST) — toggle and redirect
-- [ ] T020 [US2] Implement ProjectService.update, toggleActive
-- [ ] T021 [US2] Create templates/project/edit.html
+- [ ] T017 [US2] Implement ProjectRestController.update (PUT /api/projects/{id}) — verify ownership, validate, update
+- [ ] T018 [US2] Implement ProjectRestController.toggleActive (PATCH /api/projects/{id}/active) — toggle and return updated project
+- [ ] T019 [US2] Implement ProjectService.update, toggleActive
 
 ---
 
 ## Phase 4: User Story 3 — Visualizar y filtrar proyectos (P2)
 
-**Goal**: Directorio HTML con proyectos activos y endpoint JSON para filtros dinámicos.
+**Goal**: Directorio JSON con proyectos activos y filtros via query params en GET.
 
-**Independent Test**: GET /projects → HTML con proyectos activos. GET /api/projects?faculty=X&skill=Y → JSON filtrado.
+**Independent Test**: GET /api/projects → JSON con proyectos activos. GET /api/projects?faculty=X → JSON con resultados filtrados.
 
 ### Tests for User Story 3
 
-- [ ] T022 [US3] Integration test: GET /projects → HTML with only active projects
+- [ ] T022 [US3] Integration test: GET /api/projects → JSON with only active projects
 - [ ] T023 [US3] Integration test: GET /api/projects?skill=Python → JSON filtered by skill
-- [ ] T024 [US3] Unit test: ProjectRepository with Specification returns filtered results
+- [ ] T024 [US3] Unit test: ProjectRepository with filter params returns filtered results
 
 ### Implementation for User Story 3
 
-- [ ] T025 [US3] Implement ProjectController.listAll (GET) — render list.html with active projects
-- [ ] T026 [US3] Implement ProjectController.view (GET /project/{id}) — render view.html
-- [ ] T027 [US3] Implement ProjectApiController (JSON): GET /api/projects with filters (faculty, skill, phase)
-- [ ] T028 [US3] Implement ProjectRepository with dynamic Specification based on request params
-- [ ] T029 [US3] Create templates/project/list.html, view.html
+- [ ] T025 [US3] Implement ProjectRestController.list (GET /api/projects?faculty=&skill=&isActive=true) — query with optional filters, return JSON
+- [ ] T026 [US3] Implement ProjectRestController.getById (GET /api/projects/{id}) — return JSON
 
 ---
 
@@ -130,6 +125,7 @@ src/main/resources/
 
 ## Notes
 
-- Solo usuarios con rol RESPONSABLE pueden crear/editar proyectos. Verificar en SecurityConfig (role-based access).
+- Solo usuarios con rol RESPONSABLE pueden crear/editar proyectos. Verificar en SecurityWebFilterChain (role-based access).
 - isActive=true por defecto; proyectos inactivos excluidos de matching engine (plan-backend-04) y directorio.
-- updatedAt se actualiza automáticamente en cada update (JPA @PreUpdate).
+- updatedAt se actualiza automáticamente en cada update (via R2DBC audit o manual).
+- Directorio de proyectos: REST endpoint GET /api/projects con query params. Respuesta JSON.

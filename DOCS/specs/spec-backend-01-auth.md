@@ -1,7 +1,7 @@
 # Feature Specification: Backend — Autenticación y Gestión de Usuarios
 
 **Created**: 2026-06-13
-**Tech Stack**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Security
+**Tech Stack**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Security (JWT stateless), Spring Data R2DBC
 **Depends on**: Ninguno (prerrequisito para todos los demás módulos del backend)
 
 ## User Scenarios & Testing *(mandatory)*
@@ -18,8 +18,8 @@ Como visitante de la plataforma (estudiante o responsable de proyecto), quiero c
 
 1. **Scenario**: Registro exitoso con consentimiento
    - **Given** un visitante en la página de registro
-   - **When** completa email, contraseña, rol (estudiante/responsable), marca la casilla de consentimiento informado y envía el formulario
-   - **Then** el sistema crea el usuario, almacena el consentimiento con fecha y hora, y redirige al perfil o dashboard según el rol
+   - **When** completa email, contraseña, rol (estudiante/responsable), marca la casilla de consentimiento informado y envía POST /api/auth/register con el body JSON
+   - **Then** el sistema crea el usuario, almacena el consentimiento con fecha y hora, y devuelve el JWT y los datos del usuario
 
 2. **Scenario**: Registro rechazado sin consentimiento
    - **Given** un visitante en la página de registro
@@ -33,35 +33,40 @@ Como visitante de la plataforma (estudiante o responsable de proyecto), quiero c
 
 ---
 
-### User Story 2 — Inicio y cierre de sesión (Priority: P1)
+### User Story 2 — Inicio y cierre de sesión con JWT (Priority: P1)
 
-Como usuario registrado, quiero iniciar sesión con mis credenciales y cerrar sesión cuando termine, para proteger mi cuenta y mis datos.
+Como usuario registrado, quiero iniciar sesión con mis credenciales y obtener un token JWT para acceder a las funcionalidades protegidas de la API, y poder cerrar sesión cuando termine.
 
-**Why this priority**: La sesión es el mecanismo que habilita el acceso autenticado a todas las funcionalidades del sistema.
+**Why this priority**: La autenticación JWT es el mecanismo que habilita el acceso autenticado a todos los endpoints de la API.
 
-**Independent Test**: Puede probarse iniciando sesión con credenciales válidas, verificando que se establece la sesión, accediendo a una ruta protegida, cerrando sesión y confirmando que la ruta protegida ya no es accesible.
+**Independent Test**: Puede probarse iniciando sesión con credenciales válidas, verificando que se devuelve un JWT, usando el token en el header Authorization para acceder a endpoints protegidos, y confirmando que sin token o con token expirado los endpoints retornan 401 Unauthorized.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Inicio de sesión exitoso
+1. **Scenario**: Inicio de sesión exitoso con JWT
    - **Given** un usuario registrado con email `a@unimagdalena.edu.co` y contraseña correcta
-   - **When** ingresa sus credenciales y envía el formulario de login
-   - **Then** el sistema inicia una sesión y redirige al dashboard correspondiente a su rol
+   - **When** envía POST /api/auth/login con {email, password}
+   - **Then** el sistema devuelve HTTP 200 con un JWT en el body y los datos del usuario (id, email, rol)
 
 2. **Scenario**: Inicio de sesión fallido por contraseña incorrecta
    - **Given** un usuario registrado
-   - **When** ingresa su email pero una contraseña incorrecta
-   - **Then** el sistema rechaza el acceso con un mensaje genérico ("Credenciales inválidas") sin revelar cuál campo es incorrecto
+   - **When** envía POST /api/auth/login con email correcto pero contraseña incorrecta
+   - **Then** el sistema retorna HTTP 401 con mensaje "Credenciales inválidas" sin revelar cuál campo es incorrecto
 
-3. **Scenario**: Cierre de sesión
-   - **Given** un usuario con sesión activa
-   - **When** hace clic en "Cerrar sesión"
-   - **Then** el sistema destruye la sesión y redirige a la página de inicio
+3. **Scenario**: Cierre de sesión (revocación de token)
+   - **Given** un usuario con un JWT válido
+   - **When** envía POST /api/auth/logout con el token
+   - **Then** el sistema invalida el token (agregándolo a una lista de denegación) y retorna HTTP 200
 
-4. **Scenario**: Acceso a ruta protegida sin sesión
-   - **Given** un visitante sin sesión activa
-   - **When** intenta acceder directamente a una ruta protegida (ej. `/perfil`)
-   - **Then** el sistema redirige al login con un mensaje indicando que debe iniciar sesión
+4. **Scenario**: Acceso a endpoint protegido sin JWT
+   - **Given** un cliente sin token JWT
+   - **When** intenta acceder a un endpoint protegido (ej. GET /api/profiles)
+   - **Then** el sistema retorna HTTP 401 Unauthorized
+
+5. **Scenario**: Token JWT expirado
+   - **Given** un token JWT expirado (superó el tiempo de vida configurado)
+   - **When** el cliente intenta acceder a un endpoint protegido con ese token
+   - **Then** el sistema retorna HTTP 401 Unauthorized
 
 ---
 
@@ -112,7 +117,7 @@ Como usuario registrado, quiero poder eliminar mi cuenta y todos mis datos asoci
 ### Edge Cases
 
 - ¿Qué sucede si un usuario intenta registrarse con un email que fue eliminado previamente? El sistema debe permitirlo si la cuenta anterior fue completamente eliminada (no solo desactivada). [NEEDS CLARIFICATION: ¿soft-delete o hard-delete?]
-- ¿Cómo se maneja la expiración de sesión? [NEEDS CLARIFICATION: definir tiempo de inactividad máximo antes de cerrar sesión automáticamente]
+- ¿Cuál es el tiempo de vida del token JWT? [NEEDS CLARIFICATION: definir duración — ej. 24 horas, con refresh token opcional]
 - ¿Qué ocurre si un usuario con rol "responsable" tiene proyectos activos y solicita eliminar su cuenta? Los proyectos asociados deben transferirse a otro responsable o marcarse como inactivos. [NEEDS CLARIFICATION: definir política de transferencia o cierre]
 - ¿Se permite cambiar el rol (estudiante → responsable o viceversa) después del registro? [NEEDS CLARIFICATION: no definido en el MVP spec]
 
@@ -123,9 +128,9 @@ Como usuario registrado, quiero poder eliminar mi cuenta y todos mis datos asoci
 - **FR-AUTH-001**: El sistema MUST permitir el registro de usuarios con email, contraseña y rol (estudiante, responsable), exigiendo consentimiento informado obligatorio con registro de fecha y hora de aceptación.
 - **FR-AUTH-002**: El sistema MUST rechazar registros con email duplicado o sin consentimiento informado.
 - **FR-AUTH-003**: El sistema MUST almacenar contraseñas usando BCryptPasswordEncoder de Spring Security con sal (bcrypt).
-- **FR-AUTH-004**: El sistema MUST iniciar y mantener sesiones de usuario mediante Spring Security con sesiones server-side (HttpSession).
-- **FR-AUTH-005**: El sistema MUST proteger todas las rutas que requieran autenticación, redirigiendo al login si no hay sesión activa.
-- **FR-AUTH-006**: El sistema MUST permitir el cierre de sesión destruyendo la sesión activa.
+- **FR-AUTH-004**: El sistema MUST autenticar usuarios mediante JWT stateless con Spring Security SecurityWebFilterChain, emitiendo un token firmado en el endpoint POST /api/auth/login.
+- **FR-AUTH-005**: El sistema MUST proteger todos los endpoints que requieran autenticación, retornando HTTP 401 Unauthorized si el JWT está ausente, expirado o es inválido.
+- **FR-AUTH-006**: El sistema MUST permitir el cierre de sesión mediante POST /api/auth/logout, invalidando el JWT en el servidor.
 - **FR-AUTH-007**: El sistema SHOULD permitir la recuperación de contraseña [NEEDS CLARIFICATION: método específico — email, pregunta de seguridad, etc.]
 - **FR-AUTH-008**: El sistema MUST permitir a un usuario eliminar su cuenta junto con todos sus datos asociados (perfil, matches, notificaciones), previa confirmación explícita.
 - **FR-AUTH-009**: El sistema MUST validar que el email tenga un formato válido y que la contraseña cumpla con un mínimo de 8 caracteres. [NEEDS CLARIFICATION: política de complejidad adicional — ¿requerir mayúsculas, números, caracteres especiales?]
@@ -142,6 +147,6 @@ Como usuario registrado, quiero poder eliminar mi cuenta y todos mis datos asoci
 - **SC-AUTH-001**: Un visitante puede completar el registro (incluyendo lectura y aceptación del consentimiento) en menos de 2 minutos.
 - **SC-AUTH-002**: El sistema rechaza el 100% de intentos de registro sin consentimiento informado.
 - **SC-AUTH-003**: El sistema rechaza el 100% de intentos de registro con email duplicado.
-- **SC-AUTH-004**: El inicio de sesión exitoso ocurre en menos de 2 segundos bajo carga normal.
-- **SC-AUTH-005**: El 100% de rutas protegidas redirigen al login cuando no hay sesión activa.
+- **SC-AUTH-004**: El endpoint POST /api/auth/login retorna un JWT en menos de 2 segundos bajo carga normal.
+- **SC-AUTH-005**: El 100% de endpoints protegidos retornan HTTP 401 cuando el JWT está ausente o es inválido.
 - **SC-AUTH-006**: La eliminación de cuenta elimina o anonimiza el 100% de los datos asociados (perfil, matches, notificaciones) en menos de 5 segundos.

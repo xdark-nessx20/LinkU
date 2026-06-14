@@ -2,7 +2,7 @@
 
 **Created**: 2026-06-13
 **Priority**: P3
-**Tech Stack**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Data JPA
+**Tech Stack**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Data R2DBC
 **Depends on**: `spec-backend-05-match-interactions.md` (requiere matches confirmados para construir el grafo)
 **Maps to MVP**: User Story 4 — Visualización de red de colaboración
 
@@ -78,9 +78,9 @@ Como backend, debo proveer datos agregados por facultad (número de estudiantes,
 - **FR-NET-003**: El sistema MUST representar como aristas: relaciones de match entre estudiantes (o entre estudiante y proyecto), y calcular el peso de conexión entre facultades como la cantidad de matches "aceptados" entre estudiantes de dichas facultades.
 - **FR-NET-004**: El sistema MUST soportar filtro por facultad, devolviendo solo los nodos y aristas relacionados con la facultad seleccionada.
 - **FR-NET-005**: El sistema SHOULD reflejar al menos 3 niveles de intensidad de conexión entre facultades (baja, media, alta) basados en los pesos calculados (SC-006 del MVP spec).
-- **FR-NET-006**: El sistema MUST devolver los datos del grafo en formato JSON con arrays de nodos y aristas, expuesto como endpoint interno (`@RestController`) consumido por el frontend React para renderizar la visualización.
+- **FR-NET-006**: El sistema MUST exponer un endpoint REST GET /api/network/graph que devuelve los datos del grafo en formato JSON con arrays de nodos y aristas. La respuesta es consumida directamente por el frontend React.
 - **FR-NET-007**: El sistema MUST excluir del grafo a estudiantes y proyectos eliminados o anonimizados.
-- **FR-NET-008**: El sistema SHOULD proveer agregaciones complementarias: conteo de estudiantes por facultad, conteo de proyectos por facultad, y top-N habilidades más frecuentes.
+- **FR-NET-008**: El sistema SHOULD proveer agregaciones complementarias via GET /api/network/faculty-stats: conteo de estudiantes por facultad, conteo de proyectos por facultad, y top-N habilidades más frecuentes.
 
 ### Key Entities
 

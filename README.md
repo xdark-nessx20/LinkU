@@ -27,11 +27,13 @@ En fase de planificación. Documentación de especificaciones en `DOCS/`. Sin c�
 
 ## Arquitectura
 
-Monolito con capas (sin microservicios). Una sola aplicación, un solo puerto.
+Hexagonal (ports & adapters). Una sola aplicación, un solo puerto. Sin microservicios.
 
-- El backend (Spring Boot) sirve páginas HTML completas (Thymeleaf) e endpoints JSON internos para datos dinámicos.
-- El frontend (React) consume esos endpoints JSON para funcionalidades interactivas (búsquedas, rankings, grafo).
-- No hay una capa REST separada ni API externa — solo endpoints internos.
+- El backend (Spring Boot WebFlux) expone una REST API con `@RestController` retornando `Mono<ResponseEntity<T>>`.
+- El frontend (React SPA) consume la REST API y se sirve como recursos estáticos desde el mismo deployable.
+- Autenticación JWT stateless via Spring Security `SecurityWebFilterChain`.
+- Migraciones de base de datos con Flyway.
 
-**Backend**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Security, Spring Data JPA.  
-**Frontend**: React.
+**Backend**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Security (JWT), Spring Data R2DBC, Flyway.  
+**Frontend**: React (SPA).  
+**Build**: Gradle.

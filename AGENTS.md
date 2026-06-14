@@ -9,8 +9,9 @@ No code, build system, tests, or CI yet.
 The project is in planning phase with docs in `DOCS/`.
 
 ## Tech Stack
-- **Backend**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Security, Spring Data JPA
-- **Frontend**: React
+- **Backend**: Java 21, Spring Boot, PostgreSQL, Lombok, Spring Security (JWT stateless), Spring Data R2DBC, Flyway
+- **Frontend**: React (SPA, served as static resources from the same deployable)
+- **Build**: Gradle
 
 ## Key docs
 - `DOCS/specs/spec-unimag-match-mvp.md` — feature spec with 4 user stories (P1–P3), entities, and edge cases. Several items marked `[NEEDS CLARIFICATION]` (auth method, data retention, skill taxonomy).
@@ -35,8 +36,11 @@ The project is in planning phase with docs in `DOCS/`.
 - `DOCS/plans/plan-backend-06-network-data.md`
 
 ## Architecture
-- Monolithic with layers (no microservices). Single deployable, one port.
-- Server-rendered HTML for full pages (Thymeleaf). Internal JSON endpoints for dynamic data consumed by React components (search, rankings, graph). No separate API service or REST layer — just `@Controller` for pages and `@ResponseBody`/`@RestController`-style controllers for JSON.
+- Hexagonal (ports & adapters). Single deployable, one port. No microservices. REST API via `@RestController` returning `Mono<ResponseEntity<T>>` consumed by React SPA. No HTML templates, no Thymeleaf, no server-rendered pages.
+- Authentication: JWT stateless via Spring Security `SecurityWebFilterChain`.
+- Frontend: React SPA built separately, served as static resources (`/static/`) from the same Spring Boot deployable. In dev, React dev server proxies to Spring Boot via Vite.
+- Spring Boot WebFlux on Netty (reactive, no Tomcat).
+- Flyway for database migrations.
 - 1 Feature = 1 Spec = 1 Plan.
 
 ## Conventions
@@ -47,4 +51,4 @@ The project is in planning phase with docs in `DOCS/`.
 ## Before writing code
 - Resolve remaining `[NEEDS CLARIFICATION]` items in the specs.
 - Create an implementation plan using `DOCS/plan-template.md`.
-- Update this file with build/test/lint commands once established (e.g., `mvnw test`, `mvnw spring-boot:run`).
+- Update this file with build/test/lint commands once established (e.g., `gradlew test`, `gradlew bootRun`).

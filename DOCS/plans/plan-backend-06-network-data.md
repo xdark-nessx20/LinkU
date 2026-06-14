@@ -111,7 +111,10 @@ src/main/java/com/unimag/match/
 ## Notes
 
 - El grafo se calcula on-the-fly (no se persiste). Para muestra piloto de 120 estudiantes el rendimiento es suficiente.
+- Solo se incluyen como nodos: estudiantes y facultades (no programas, proyectos ni habilidades).
 - Los nodos de estudiantes se incluyen solo si tienen al menos un match ACEPTADO (sin nodos aislados).
+- Estudiantes en múltiples facultades (máx. 2): el nodo de estudiante se conecta a ambas facultades.
+- La granularidad de visualización (zoom-in/zoom-out) la maneja el frontend con la librería de grafos; el backend entrega el grafo completo.
 - Peso intra-facultad (matches entre estudiantes de la misma facultad): se incluye como arista con source=target=facultad, weight=count.
 - Graph data served via REST endpoint GET /api/network/graph as JSON. Faculty stats at GET /api/network/faculty-stats.
 - Clean code: meaningful names, small methods, SRP. No dead code, no commented-out code.

@@ -133,7 +133,7 @@ Como usuario registrado, quiero poder eliminar mi cuenta y todos mis datos asoci
 - **FR-AUTH-006**: El sistema MUST permitir el cierre de sesión mediante POST /api/auth/logout, invalidando el JWT en el servidor.
 - **FR-AUTH-007**: El sistema MUST permitir la recuperación de contraseña mediante envío de un enlace de restablecimiento al correo electrónico del usuario.
 - **FR-AUTH-008**: El sistema MUST permitir a un usuario eliminar su cuenta junto con todos sus datos asociados (perfil, matches, notificaciones), previa confirmación explícita.
-- **FR-AUTH-009**: El sistema MUST validar que el email tenga un formato válido y que la contraseña cumpla con un mínimo de 8 caracteres. [NEEDS CLARIFICATION: política de complejidad adicional — ¿requerir mayúsculas, números, caracteres especiales?]
+- **FR-AUTH-009**: El sistema MUST validar que el email tenga un formato válido y que la contraseña cumpla con un mínimo de 8 caracteres, incluyendo al menos una mayúscula, un número y un carácter especial.
 - **FR-AUTH-010**: El sistema MUST mostrar mensajes de error genéricos en login y recuperación de contraseña que no revelen si el email existe o no en la base de datos (anti-enumeración).
 
 ### Key Entities

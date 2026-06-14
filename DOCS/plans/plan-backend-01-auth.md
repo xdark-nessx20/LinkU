@@ -64,7 +64,7 @@ src/test/java/com/unimag/match/
 - [ ] T006 Create UserRepository port interface in domain/port/UserRepository.java (findByEmail, existsByEmail)
 - [ ] T007 Create R2dbcUserRepository adapter in infrastructure/persistence/R2dbcUserRepository.java
 - [ ] T008 Configure SecurityConfig to use ReactiveUserDetailsService backed by UserRepository
-- [ ] T009 Create RegistrationForm DTO in application/dto/RegistrationForm.java with validation (@Email, @NotBlank, @Size(min=8), consentGiven must be true)
+- [ ] T009 Create RegistrationForm DTO in application/dto/RegistrationForm.java with validation (@Email, @NotBlank, @Size(min=8), must contain uppercase, number, and special character, consentGiven must be true)
 - [ ] T010 Create AuthRestController basic skeleton in infrastructure/web/AuthRestController.java
 
 ---

@@ -64,17 +64,17 @@ Como backend, debo proveer datos agregados por facultad (número de estudiantes,
 
 ### Edge Cases
 
-- **Estudiante en múltiples programas/facultades**: [NEEDS CLARIFICATION: el modelo actual asume una sola facultad/programa por estudiante. Si se soportan múltiples, el grafo debe reflejar membresía múltiple.]
+- **Estudiante en múltiples programas/facultades**: Un estudiante puede pertenecer a máximo 2 facultades (ver spec-backend-02). El grafo debe reflejar la membresía múltiple: el estudiante aparece como nodo conectado a ambas facultades.
 - **Matches entre estudiantes de la misma facultad**: Deben reflejarse como conexiones intra-facultad (autoconexiones o peso interno), no como conexiones entre facultades distintas.
-- **Un estudiante o facultad sin conexiones**: Debe aparecer como nodo aislado o no aparecer, según se defina. [NEEDS CLARIFICATION: ¿nodos aislados visibles u ocultos?]
-- **Rendimiento con grafos grandes**: La muestra piloto es pequeña (120 estudiantes, ~5 facultades). Para escalar, el backend debe limitar el número de nodos/aristas devueltos. [NEEDS CLARIFICATION: ¿paginación o truncamiento? No necesario para MVP.]
+- **Un estudiante o facultad sin conexiones**: No aparece en el grafo. Los nodos aislados (sin aristas) se ocultan.
+- **Rendimiento con grafos grandes**: La muestra piloto es pequeña (120 estudiantes, ~5 facultades). El backend devuelve el grafo completo sin paginación ni truncamiento. La granularidad de visualización (zoom-in/zoom-out) la maneja el frontend con la librería de grafos.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
 - **FR-NET-001**: El sistema MUST proveer una consulta que devuelva los nodos y aristas del grafo de colaboración basado en matches en estado "aceptado".
-- **FR-NET-002**: El sistema MUST representar como nodos: estudiantes y facultades. [NEEDS CLARIFICATION: ¿también programas, proyectos, habilidades como nodos adicionales? El documento UNIMAG Match menciona todos estos como posibles nodos.]
+- **FR-NET-002**: El sistema MUST representar como nodos: estudiantes y facultades.
 - **FR-NET-003**: El sistema MUST representar como aristas: relaciones de match entre estudiantes (o entre estudiante y proyecto), y calcular el peso de conexión entre facultades como la cantidad de matches "aceptados" entre estudiantes de dichas facultades.
 - **FR-NET-004**: El sistema MUST soportar filtro por facultad, devolviendo solo los nodos y aristas relacionados con la facultad seleccionada.
 - **FR-NET-005**: El sistema SHOULD reflejar al menos 3 niveles de intensidad de conexión entre facultades (baja, media, alta) basados en los pesos calculados (SC-006 del MVP spec).

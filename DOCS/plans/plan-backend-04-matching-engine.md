@@ -65,15 +65,16 @@ src/main/resources/
 ## Phase 2: Foundational — Scoring Logic
 
 - [ ] T006 Implement MatchingService.calculateMatch(StudentProfile, Project): MatchScore
-  - Skill matching: count overlapping skills between student.skills and project.requiredSkills → skillScore = count × weight.skill, capped at 60
+  - Skill matching: count overlapping skills between student.skills and project.requiredSkills → skillScore = count × weight.skill (sin tope, acumulativo por cada habilidad)
   - Program matching: if student.program matches or relates to project.relatedFaculty → weight.program (15)
   - Interest matching: if any student.interest overlaps with project.mainObjective/topic → weight.interest (20)
-  - Experience matching: if student.priorExperience relates to project description → weight.experience (20) [NEEDS CLARIFICATION: matching por palabras clave básico por ahora]
+  - Experience matching: if student.priorExperience relates to project description by keyword matching and thematic category → weight.experience (20)
   - Availability: if student.availability matches project.expectedAvailability → weight.availability (15)
-  - totalScore = skillScore + programScore + interestScore + experienceScore + availabilityScore, normalized to 0-100
+  - totalScore = skillScore + programScore + interestScore + experienceScore + availabilityScore (puede exceder 100)
+  - normalizedScore = totalScore relativo al máximo del conjunto, escalado a 0-100 (ej. si el máximo es 125, 125→100%, 62.5→50%)
   - scoreFactors: JSON construido con breakdown de cada factor
-- [ ] T007 Implement score normalization: min(totalScore, 100) for capping at 100%
-- [ ] T008 Implement tie-breaking: when totalScore equals → order by studentProfile.updatedAt desc, then studentProfile.fullName asc
+- [ ] T007 Implement score normalization: normalizedScore = (totalScore / maxTotalScoreInSet) × 100 para porcentaje relativo. Solo se incluyen en rankings recomendaciones con normalizedScore ≥ 50%.
+- [ ] T008 Implement tie-breaking: when normalizedScore equals → order by studentProfile.updatedAt desc, then studentProfile.fullName asc
 
 ---
 
@@ -164,9 +165,11 @@ src/main/resources/
 ## Notes
 
 - Pesos configurados en application.properties bajo matching.weights.* para fácil calibración
-- SkillScore: +30 por cada habilidad coincidente, pero cap total de skillScore a 60 (máximo 2 habilidades cuentan). Esto evita que un estudiante con muchas habilidades sobrepase 100 siempre.
-- Score normalization: totalScore = min(rawScore, 100)
-- [NEEDS CLARIFICATION]: Experiencia previa "relacionada" usa matching de palabras clave simple en MVP. Mejorar en fase post-piloto.
-- MatchScore se persiste para auditoría y rendimiento. Se borra y recalcula ante cambios relevantes.
+- SkillScore: +30 por cada habilidad coincidente, sin tope. La normalización se hace de forma relativa al máximo puntaje del conjunto.
+- Score normalization: porcentaje relativo al máximo del conjunto (puntaje bruto puede exceder 100). Umbral mínimo de visualización: ≥50%.
+- Experiencia previa "relacionada" usa matching de palabras clave y categoría temática en el MVP. Mejorar en fase post-piloto.
+- MatchScore se persiste para auditoría y rendimiento. Se borra y recalcula bajo demanda ante cambios relevantes.
+- Cálculo bajo demanda por usuario (no precalculado periódicamente). Se ejecuta al solicitar rankings.
 - Rankings via REST endpoints GET /api/recommendations/student/{id} y GET /api/recommendations/project/{id}. Respuestas JSON.
+- Criterios de desempate: (1) fecha de actualización de perfil más reciente, (2) orden alfabético por nombre.
 - Clean code: meaningful names, small methods, SRP. No dead code, no commented-out code.

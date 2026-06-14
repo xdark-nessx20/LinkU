@@ -89,16 +89,16 @@ Como usuario del sistema, quiero ver mi propio perfil y consultar el directorio 
 4. **Scenario**: Directorio respeta privacidad
    - **Given** un usuario no autenticado
    - **When** intenta acceder al directorio de perfiles
-    - **Then** el sistema retorna HTTP 401 (el directorio solo es accesible para usuarios autenticados) [NEEDS CLARIFICATION: ¿el directorio debe ser visible para todos los usuarios autenticados o solo para responsables de proyecto?]
+    - **Then** el sistema retorna HTTP 401 (el directorio solo es accesible para usuarios autenticados). Cualquier usuario con sesión activa puede consultar el directorio, sin importar su rol.
 
 ---
 
 ### Edge Cases
 
 - ¿Qué sucede con los matches existentes cuando un estudiante cambia sus habilidades o intereses? Los matches en estado "sugerido" o "interesado" deben recalcularse o marcarse para revisión. Los matches "confirmados" o "rechazados" no se ven afectados.
-- ¿Cómo se maneja la normalización de habilidades escritas en texto libre vs. una lista predefinida? [NEEDS CLARIFICATION: ¿se usará una taxonomía controlada de habilidades, texto libre con normalización, o un sistema híbrido (autocompletado desde un catálogo + opción de texto libre)? Esto impacta directamente el motor de matching.]
+- ¿Cómo se maneja la normalización de habilidades? Se usará una taxonomía controlada de habilidades con autocompletado desde un catálogo predefinido. Las habilidades se vinculan a las SkillCategory existentes.
 - ¿Qué ocurre si un estudiante elimina su cuenta? El perfil asociado se elimina junto con la cuenta (definido en spec-backend-01-auth, FR-AUTH-008).
-- ¿Un estudiante puede pertenecer a múltiples facultades o programas (doble titulación)? [NEEDS CLARIFICATION: el modelo actual asume una sola facultad/programa. Si se requiere soportar múltiples, la relación cambia de 1:1 a 1:N en esos campos.]
+- ¿Un estudiante puede pertenecer a múltiples facultades o programas (doble titulación)? Sí, un estudiante puede pertenecer a máximo 2 facultades simultáneamente. La relación cambia de 1:1 a 1:N (máximo 2) en el campo faculty.
 
 ## Requirements *(mandatory)*
 
@@ -111,13 +111,13 @@ Como usuario del sistema, quiero ver mi propio perfil y consultar el directorio 
 - **FR-PROF-005**: El sistema MUST mantener una relación uno-a-uno entre User (rol estudiante) y StudentProfile. Un usuario no puede tener más de un perfil.
 - **FR-PROF-006**: El sistema MUST exponer un endpoint REST GET /api/profiles con parámetros de consulta opcionales (faculty, program, skill) para consultar el directorio de perfiles con paginación. La respuesta es JSON paginado con los datos del perfil (excluyendo información sensible).
 - **FR-PROF-007**: El sistema MUST mostrar un mensaje al estudiante con perfil incompleto indicando qué campos faltan para recibir mejores recomendaciones, cuando intente acceder a la sección de recomendaciones.
-- **FR-PROF-008**: El sistema MUST asociar habilidades a categorías predefinidas para normalización, según la taxonomía definida en [NEEDS CLARIFICATION: taxonomía de habilidades no definida — ver spec-unimag-match-mvp.md Edge Cases. La propuesta del proyecto incluye 8 categorías: Tecnología y datos, Comunicación y divulgación, Investigación, Diseño y creatividad, Emprendimiento y gestión, Bienestar y sociedad, Ambiente y territorio, Cultura e identidad.]
+- **FR-PROF-008**: El sistema MUST asociar habilidades a categorías predefinidas para normalización. La taxonomía incluye 8 categorías fijas: Tecnología y datos, Comunicación y divulgación, Investigación, Diseño y creatividad, Emprendimiento y gestión, Bienestar y sociedad, Ambiente y territorio, Cultura e identidad.
 - **FR-PROF-009**: El sistema MUST registrar la fecha de creación y la fecha de última actualización del perfil (requerido por FR-012 del MVP spec para soporte de desempate en recomendaciones).
 
 ### Key Entities
 
 - **StudentProfile**: Representa el perfil académico de un estudiante. Atributos: user_id (FK a User, único), full_name, faculty, program, semester, skills (lista de habilidades, cada una opcionalmente vinculada a una SkillCategory), interests (lista de áreas de interés), prior_experience (texto), tools (lista), availability (texto/opciones), preferred_role (texto/opciones), is_complete (boolean), created_at, updated_at. La relación con User es uno-a-uno (único user_id). La relación con SkillCategory es muchos-a-muchos via tabla de unión.
-- **SkillCategory**: Representa una categoría de habilidades dentro de la taxonomía. Atributos: name, description. [NEEDS CLARIFICATION: ¿las categorías son fijas (seed data cargada via Flyway migration) o administrables?] Relaciona habilidades de estudiantes con áreas de matching.
+- **SkillCategory**: Representa una categoría de habilidades dentro de la taxonomía. Atributos: name, description. Las categorías son fijas y se cargan como seed data via Flyway migration (8 categorías predefinidas). Relaciona habilidades de estudiantes con áreas de matching.
 
 ## Success Criteria *(mandatory)*
 

@@ -125,7 +125,9 @@ src/main/resources/
 
 ## Notes
 
-- Solo usuarios con rol RESPONSABLE pueden crear/editar proyectos. Verificar en SecurityWebFilterChain (role-based access).
+- Solo usuarios con rol RESPONSABLE (o rol híbrido estudiante+responsable) pueden crear/editar proyectos. Verificar en SecurityWebFilterChain (role-based access).
+- Usuarios con rol "estudiante" pueden crear proyectos cambiando su rol a "responsable" o mediante un rol híbrido con ambos permisos.
+- Sin límite de creación de proyectos por usuario.
 - isActive=true por defecto; proyectos inactivos excluidos de matching engine (plan-backend-04) y directorio.
 - updatedAt se actualiza automáticamente en cada update (via R2DBC audit o manual).
 - Directorio de proyectos: REST endpoint GET /api/projects con query params. Respuesta JSON.

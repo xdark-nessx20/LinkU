@@ -118,13 +118,13 @@ src/test/java/com/unimag/match/
 
 **Goal**: Usuario puede solicitar restablecimiento de contraseña.
 
-**Independent Test**: Solicitar restablecimiento para email existente → sistema procesa (implementación concreta depende de [NEEDS CLARIFICATION: infraestructura de email]).
+**Independent Test**: Solicitar restablecimiento para email existente → sistema envía enlace por correo electrónico al usuario.
 
 ### Implementation for User Story 3
 
 - [ ] T027 [US3] Create password-recovery.html template (email field)
 - [ ] T028 [US3] Implement AuthController.forgotPassword (POST) — muestra mensaje genérico
-- [ ] T029 [US3] [NEEDS CLARIFICATION: implementar envío de email con token o mecanismo alternativo según decisión de infraestructura]
+- [ ] T029 [US3] Implementar envío de correo electrónico con token de restablecimiento (SMTP o servicio de email)
 
 ---
 
@@ -161,5 +161,8 @@ src/test/java/com/unimag/match/
 - BCryptPasswordEncoder bean in SecurityConfig for password hashing and JWT login verification
 - Errores de API retornados como JSON con códigos HTTP apropiados (400, 401, 409, etc.)
 - Flyway migrations handle schema creation (no data.sql for DDL)
-- [NEEDS CLARIFICATION]: US3 depende de decisión sobre infraestructura de email
+- US3: Recuperación de contraseña via enlace enviado por correo electrónico con token de restablecimiento
+- Hard delete: La eliminación de cuenta borra todos los registros asociados (sin soft-delete)
+- Token JWT: 6 horas de duración. Refresh token: 7 días de duración
+- Responsable con proyectos activos: Al solicitar eliminación de cuenta, debe elegir entre transferir proyectos o inactivarlos
 - Clean code: meaningful names, small methods, SRP. No dead code, no commented-out code.

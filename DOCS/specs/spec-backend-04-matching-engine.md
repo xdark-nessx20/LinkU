@@ -35,7 +35,7 @@ Como motor del sistema, debo calcular un puntaje de compatibilidad entre cada es
 4. **Scenario**: Coincidencia por experiencia previa relacionada
    - **Given** un estudiante con experiencia en "proyectos de bienestar estudiantil" y un proyecto sobre "bienestar estudiantil"
    - **When** el motor calcula la coincidencia
-   - **Then** el puntaje suma +20 puntos por experiencia relacionada [NEEDS CLARIFICATION: ¿cómo se determina si la experiencia es "relacionada"? ¿Por palabras clave, categoría temática, o matching semántico?]
+    - **Then** el puntaje suma +20 puntos por experiencia relacionada. La relación se determina por coincidencia de palabras clave y categoría temática entre la experiencia previa del estudiante y la descripción/área del proyecto.
 
 5. **Scenario**: Coincidencia por disponibilidad compatible
    - **Given** un estudiante con disponibilidad "tarde" y un proyecto que requiere disponibilidad "tarde"
@@ -64,10 +64,10 @@ Como estudiante, quiero recibir una lista de proyectos recomendados ordenada por
    - **When** el sistema genera recomendaciones para ese estudiante
    - **Then** los proyectos se muestran en orden: 90%, 60%, 45%. El proyecto con 0% se excluye.
 
-2. **Scenario**: Explicación de factores de coincidencia
-   - **Given** una recomendación de 75% para un estudiante
-   - **When** el estudiante consulta el detalle
-   - **Then** el sistema desglosa: "+30 Python (habilidad coincidente), +20 interés en sostenibilidad, +15 disponibilidad compatible, +10 programa relacionado = 75/100". [NEEDS CLARIFICATION: ¿puntaje base sobre 100 o porcentaje relativo al máximo teórico? El documento UNIMAG Match sugiere +30/+15/+20/+20/+15 = 100 puntos máximos, lo que equivale a 100%.]
+ 2. **Scenario**: Explicación de factores de coincidencia
+    - **Given** una recomendación con puntaje para un estudiante
+    - **When** el estudiante consulta el detalle
+    - **Then** el sistema desglosa: "+30 Python (habilidad coincidente), +30 SQL (habilidad coincidente), +20 interés en sostenibilidad, +15 disponibilidad compatible, +10 programa relacionado = 105 → normalizado a 100% (porcentaje relativo)". Tener más de una habilidad coincidente aumenta el puntaje acumulativamente. Si el puntaje total excede el máximo de 100, se normaliza mostrando un porcentaje relativo (ej. 125 → 100%, 100 → 80%, 62.5 → 50%).
 
 3. **Scenario**: Estudiante sin habilidades registradas
    - **Given** un estudiante con perfil incompleto (sin habilidades ni intereses)
@@ -122,11 +122,11 @@ Como motor del sistema, debo reflejar los cambios en perfiles o proyectos en los
 
 ### Edge Cases
 
-- **Empate entre dos estudiantes con idéntico puntaje**: El desempate debe ser determinista y explicable. Criterios propuestos en orden: (1) fecha de actualización de perfil más reciente, (2) orden alfabético por nombre. [NEEDS CLARIFICATION: confirmar criterios de desempate.]
-- **Rendimiento con la muestra piloto**: El sistema debe procesar el cálculo para 120 estudiantes × 25 proyectos = 3000 comparaciones en menos de 10 segundos (SC-005 del MVP spec). [NEEDS CLARIFICATION: ¿el cálculo se ejecuta bajo demanda por usuario o se precalcula periódicamente?]
-- **Umbral mínimo de coincidencia**: ¿A partir de qué porcentaje se considera una recomendación "válida"? El documento no define un umbral explícito. Debe ser configurable. [NEEDS CLARIFICATION: definir umbral — ej. ≥20% para mostrar, o mostrar siempre ordenado por puntaje.]
-- **Habilidades con nombres equivalentes**: "Manejo de redes sociales" vs "Community management" vs "Social media". La normalización es crítica para el matching. [NEEDS CLARIFICATION: definido en spec-backend-02-student-profile.md — depende de la taxonomía de habilidades.]
-- **Ponderación de criterios**: Los puntajes del documento UNIMAG Match (+30/+15/+20/+20/+15) son sugeridos. [NEEDS CLARIFICATION: ¿son estos los pesos definitivos o deben ser configurables/calibrables tras la fase piloto?]
+- **Empate entre dos estudiantes con idéntico puntaje**: El desempate es determinista y explicable. Criterios en orden: (1) fecha de actualización de perfil más reciente primero, (2) orden alfabético por nombre del estudiante.
+- **Rendimiento con la muestra piloto**: El sistema debe procesar el cálculo para 120 estudiantes × 25 proyectos = 3000 comparaciones en menos de 10 segundos (SC-005 del MVP spec). El cálculo se ejecuta bajo demanda por usuario inicialmente (no precalculado periódicamente).
+- **Umbral mínimo de coincidencia**: Solo se muestran recomendaciones con puntaje ≥ 50% (tras normalización). Las recomendaciones por debajo del umbral se excluyen de los rankings.
+- **Habilidades con nombres equivalentes**: Se resuelve mediante la taxonomía controlada de habilidades definida en spec-backend-02-student-profile.md. Cada habilidad se asocia a una SkillCategory predefinida. La coincidencia se evalúa por habilidad exacta dentro del catálogo, no por similitud textual.
+- **Ponderación de criterios**: Los puntajes definidos (+30 por habilidad, +15 programa, +20 interés, +20 experiencia, +15 disponibilidad) son los pesos iniciales para el MVP. Son configurables mediante propiedades de Spring Boot para calibración futura.
 
 ## Requirements *(mandatory)*
 
@@ -134,13 +134,12 @@ Como motor del sistema, debo reflejar los cambios en perfiles o proyectos en los
 
 - **FR-MATCH-001**: El sistema MUST calcular un puntaje de coincidencia entre cada estudiante (con perfil) y cada proyecto activo, basado en reglas ponderadas y explicables.
 - **FR-MATCH-002**: El sistema MUST usar los siguientes criterios y ponderaciones base para el cálculo:
-  - Habilidad requerida por el proyecto que el estudiante posee: +30 puntos por habilidad coincidente.
+  - Habilidad requerida por el proyecto que el estudiante posee: +30 puntos por cada habilidad coincidente (acumulativo, sin tope por cantidad de habilidades).
   - Estudiante pertenece a un programa recomendado o afín al proyecto: +15 puntos.
   - Estudiante comparte área de interés con la temática del proyecto: +20 puntos.
   - Estudiante tiene experiencia previa relacionada con el proyecto: +20 puntos.
   - Estudiante tiene disponibilidad compatible con la requerida: +15 puntos.
-  - Puntaje máximo teórico: 100 puntos (100%).
-  [NEEDS CLARIFICATION: ¿los +30 son por cada habilidad coincidente o una sola vez por el criterio? El documento sugiere "por habilidad coincidente", lo que implicaría que el puntaje puede superar 100 si hay múltiples habilidades coincidentes. Definir si hay un tope o se normaliza.]
+  - Si el puntaje total excede 100, se normaliza a un porcentaje relativo (ej. puntaje 125 se muestra como 100%, otros puntajes se escalan proporcionalmente).
 - **FR-MATCH-003**: El sistema MUST generar, para cada recomendación, un desglose de factores que explique el puntaje (transparencia algorítmica — FR-005 y FR-006 del MVP spec). Ejemplo: "+30 Python, +20 sostenibilidad = 50%".
 - **FR-MATCH-004**: El sistema MUST generar rankings ordenados por puntaje descendente en los siguientes endpoints REST: (a) GET /api/recommendations/student/{userId} → lista de proyectos, (b) GET /api/recommendations/project/{projectId} → lista de estudiantes. Las respuestas son JSON con totalScore y scoreFactors por cada recomendación.
 - **FR-MATCH-005**: El sistema MUST excluir de los rankings los proyectos inactivos y los perfiles de estudiantes que hayan sido eliminados.
@@ -152,7 +151,7 @@ Como motor del sistema, debo reflejar los cambios en perfiles o proyectos en los
 
 ### Key Entities
 
-- **MatchScore**: Representa el resultado calculado de compatibilidad entre un estudiante y un proyecto. Atributos: student_id (FK), project_id (FK), total_score (0-100), skill_score, program_score, interest_score, experience_score, availability_score, score_factors (desglose JSON explicando cada factor, almacenado como JSONB en PostgreSQL), calculated_at. Se persiste en base de datos y se recalcula bajo demanda ante cambios en perfil o proyecto.
+- **MatchScore**: Representa el resultado calculado de compatibilidad entre un estudiante y un proyecto. Atributos: student_id (FK), project_id (FK), total_score (puntaje bruto, puede superar 100), normalized_score (porcentaje relativo 0-100), skill_score, program_score, interest_score, experience_score, availability_score, score_factors (desglose JSON explicando cada factor, almacenado como JSONB en PostgreSQL), calculated_at. Se persiste en base de datos y se recalcula bajo demanda ante cambios en perfil o proyecto.
 
 ## Success Criteria *(mandatory)*
 

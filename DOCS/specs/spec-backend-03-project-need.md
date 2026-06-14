@@ -91,10 +91,10 @@ Como usuario del sistema (estudiante o responsable), quiero consultar el directo
 ### Edge Cases
 
 - ¿Qué sucede con los matches asociados a un proyecto que se desactiva? Los matches en estado "sugerido" o "interesado" asociados a ese proyecto deben marcarse como "cancelados" o "expirados". Los matches "confirmados" deben notificarse al responsable para que decida.
-- ¿Qué sucede con los matches asociados a un proyecto cuyas habilidades requeridas cambian? Los matches existentes deben recalcularse para reflejar los nuevos criterios. [NEEDS CLARIFICATION: ¿se recalculan automáticamente o bajo demanda?]
-- ¿Qué ocurre si el responsable de un proyecto elimina su cuenta? [NEEDS CLARIFICATION: ¿los proyectos se eliminan, se transfieren a otro responsable, o quedan huérfanos? Definir en conjunto con spec-backend-01-auth.]
-- ¿Un mismo usuario puede crear proyectos ilimitados? Sí, en el contexto del MVP. [NEEDS CLARIFICATION: ¿se requiere límite? No definido.]
-- ¿Se permite que un estudiante (rol "estudiante") también cree proyectos? [NEEDS CLARIFICATION: el modelo actual separa roles, pero un estudiante podría también liderar un proyecto. Evaluar si se necesita rol "ambos" o permisos flexibles.]
+- ¿Qué sucede con los matches asociados a un proyecto cuyas habilidades requeridas cambian? Los matches existentes deben recalcularse bajo demanda para reflejar los nuevos criterios (ver spec-backend-04-matching-engine).
+- ¿Qué ocurre si el responsable de un proyecto elimina su cuenta? El responsable debe elegir entre transferir sus proyectos a otro responsable o inactivarlos antes de eliminar su cuenta (definido en spec-backend-01-auth).
+- ¿Un mismo usuario puede crear proyectos ilimitados? Sí, no hay límite de creación de proyectos.
+- ¿Se permite que un estudiante (rol "estudiante") también cree proyectos? Sí. Un estudiante que desee crear un proyecto cambiará su rol a "responsable" (o se le asignará un rol híbrido con ambos permisos: estudiante + responsable).
 
 ## Requirements *(mandatory)*
 
@@ -107,7 +107,7 @@ Como usuario del sistema (estudiante o responsable), quiero consultar el directo
 - **FR-PROY-005**: El sistema MUST validar que los campos obligatorios (nombre, descripción) no estén vacíos al crear o editar.
 - **FR-PROY-006**: El sistema MUST registrar la fecha de creación y última actualización de cada proyecto (requerido por FR-012 del MVP spec).
 - **FR-PROY-007**: El sistema MUST exponer un endpoint REST GET /api/projects con parámetros de consulta opcionales (faculty, skill, phase, isActive) para consultar el directorio de proyectos con paginación. La respuesta es JSON paginado.
-- **FR-PROY-008**: El sistema MUST indicar al responsable cuando un proyecto activo no recibe coincidencias por encima del umbral mínimo [NEEDS CLARIFICATION: ¿umbral definido en spec-backend-04-matching], sugiriendo ampliar los criterios de búsqueda.
+- **FR-PROY-008**: El sistema MUST indicar al responsable cuando un proyecto activo no recibe coincidencias por encima del umbral mínimo del 50%, sugiriendo ampliar los criterios de búsqueda.
 
 ### Key Entities
 

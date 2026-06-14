@@ -35,7 +35,7 @@ Como visitante de la plataforma (estudiante o responsable de proyecto), quiero c
 
 ### User Story 2 — Inicio y cierre de sesión con JWT (Priority: P1)
 
-Como usuario registrado, quiero iniciar sesión con mis credenciales y obtener un token JWT para acceder a las funcionalidades protegidas de la API, y poder cerrar sesión cuando termine.
+Como usuario registrado, quiero poder iniciar sesión y cerrar sesión.
 
 **Why this priority**: La autenticación JWT es el mecanismo que habilita el acceso autenticado a todos los endpoints de la API.
 
@@ -83,7 +83,7 @@ Como usuario registrado, quiero poder restablecer mi contraseña si la olvido, p
 1. **Scenario**: Solicitud de restablecimiento de contraseña
    - **Given** un usuario registrado con email `a@unimagdalena.edu.co`
    - **When** solicita restablecer su contraseña desde la página de login
-   - **Then** el sistema procesa la solicitud [NEEDS CLARIFICATION: ¿se envía un enlace por correo electrónico o se usa otro mecanismo de recuperación? Depende de la infraestructura de envío de emails disponible]
+    - **Then** el sistema envía un enlace de restablecimiento al correo electrónico del usuario
 
 2. **Scenario**: Solicitud con email no registrado
    - **Given** un email que no pertenece a ningún usuario
@@ -116,10 +116,10 @@ Como usuario registrado, quiero poder eliminar mi cuenta y todos mis datos asoci
 
 ### Edge Cases
 
-- ¿Qué sucede si un usuario intenta registrarse con un email que fue eliminado previamente? El sistema debe permitirlo si la cuenta anterior fue completamente eliminada (no solo desactivada). [NEEDS CLARIFICATION: ¿soft-delete o hard-delete?]
-- ¿Cuál es el tiempo de vida del token JWT? [NEEDS CLARIFICATION: definir duración — ej. 24 horas, con refresh token opcional]
-- ¿Qué ocurre si un usuario con rol "responsable" tiene proyectos activos y solicita eliminar su cuenta? Los proyectos asociados deben transferirse a otro responsable o marcarse como inactivos. [NEEDS CLARIFICATION: definir política de transferencia o cierre]
-- ¿Se permite cambiar el rol (estudiante → responsable o viceversa) después del registro? [NEEDS CLARIFICATION: no definido en el MVP spec]
+- ¿Qué sucede si un usuario intenta registrarse con un email que fue eliminado previamente? El sistema debe permitirlo ya que la eliminación es hard delete (borrado total de registros).
+- ¿Cuál es el tiempo de vida del token JWT? El token de acceso (JWT) tiene una duración de 6 horas. Se emite un refresh token con duración de 7 días para renovar el acceso sin volver a iniciar sesión.
+- ¿Qué ocurre si un usuario con rol "responsable" tiene proyectos activos y solicita eliminar su cuenta? El usuario debe elegir entre transferir sus proyectos a otro responsable o inactivarlos antes de proceder con la eliminación.
+- ¿Se permite cambiar el rol (estudiante → responsable o viceversa) después del registro? No en el MVP; un estudiante que quiera crear un proyecto debe hacerlo desde un nuevo rol o cuenta de responsable (ver spec-backend-03-project-need).
 
 ## Requirements *(mandatory)*
 
@@ -131,7 +131,7 @@ Como usuario registrado, quiero poder eliminar mi cuenta y todos mis datos asoci
 - **FR-AUTH-004**: El sistema MUST autenticar usuarios mediante JWT stateless con Spring Security SecurityWebFilterChain, emitiendo un token firmado en el endpoint POST /api/auth/login.
 - **FR-AUTH-005**: El sistema MUST proteger todos los endpoints que requieran autenticación, retornando HTTP 401 Unauthorized si el JWT está ausente, expirado o es inválido.
 - **FR-AUTH-006**: El sistema MUST permitir el cierre de sesión mediante POST /api/auth/logout, invalidando el JWT en el servidor.
-- **FR-AUTH-007**: El sistema SHOULD permitir la recuperación de contraseña [NEEDS CLARIFICATION: método específico — email, pregunta de seguridad, etc.]
+- **FR-AUTH-007**: El sistema MUST permitir la recuperación de contraseña mediante envío de un enlace de restablecimiento al correo electrónico del usuario.
 - **FR-AUTH-008**: El sistema MUST permitir a un usuario eliminar su cuenta junto con todos sus datos asociados (perfil, matches, notificaciones), previa confirmación explícita.
 - **FR-AUTH-009**: El sistema MUST validar que el email tenga un formato válido y que la contraseña cumpla con un mínimo de 8 caracteres. [NEEDS CLARIFICATION: política de complejidad adicional — ¿requerir mayúsculas, números, caracteres especiales?]
 - **FR-AUTH-010**: El sistema MUST mostrar mensajes de error genéricos en login y recuperación de contraseña que no revelen si el email existe o no en la base de datos (anti-enumeración).

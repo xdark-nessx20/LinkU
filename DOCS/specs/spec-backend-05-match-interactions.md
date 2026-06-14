@@ -47,7 +47,7 @@ Como usuario que recibe una notificación de interés, quiero aceptar o rechazar
 1. **Scenario**: Aceptar un match recibido
    - **Given** un responsable que recibió un match "interesado" del estudiante A para su proyecto X
    - **When** el responsable revisa el match y hace clic en "Aceptar"
-   - **Then** el sistema cambia el estado a "aceptado", notifica al estudiante A, y muestra datos de contacto [NEEDS CLARIFICATION: ¿qué información de contacto se comparte? ¿Email, nombre completo, o solo una notificación en plataforma?]
+    - **Then** el sistema cambia el estado a "aceptado", notifica al estudiante A, y muestra los datos de contacto (nombre completo y correo electrónico de ambas partes)
 
 2. **Scenario**: Rechazar un match recibido
    - **Given** un estudiante que recibió un match "interesado" del proyecto Y
@@ -62,7 +62,7 @@ Como usuario que recibe una notificación de interés, quiero aceptar o rechazar
 4. **Scenario**: Match rechazado se vuelve a sugerir si los datos cambian
    - **Given** un match rechazado entre estudiante A y proyecto X
    - **When** el estudiante A agrega nuevas habilidades a su perfil o el proyecto X modifica sus requisitos
-   - **Then** el sistema puede volver a sugerir el proyecto X al estudiante A porque las condiciones cambiaron [NEEDS CLARIFICATION: ¿cuánto deben cambiar los datos para reactivar la sugerencia? ¿Cualquier cambio o un cambio significativo?]
+    - **Then** el sistema puede volver a sugerir el proyecto X al estudiante A si se produjo un cambio significativo en los datos (nuevas habilidades en el perfil del estudiante, cambios en las habilidades requeridas del proyecto, o cambio de disponibilidad)
 
 ---
 
@@ -91,10 +91,10 @@ Como usuario, quiero ver una lista de todos mis matches (enviados y recibidos) c
 ### Edge Cases
 
 - **Match rechazado por ambas partes**: Ambas partes rechazan; el match permanece en estado "rechazado" y no se vuelve a sugerir.
-- **Match expirado sin respuesta**: [NEEDS CLARIFICATION: ¿los matches "interesado" expiran después de un tiempo? El MVP spec no define expiración. Si no expiran, un match puede quedar sin respuesta indefinidamente.]
+- **Match expirado sin respuesta**: Los matches en estado "interesado" no expiran. Un match puede permanecer sin respuesta indefinidamente hasta que el receptor tome una acción (aceptar o rechazar).
 - **Un usuario elimina su cuenta con matches activos**: Los matches donde participa el usuario eliminado deben anonimizarse o eliminarse (FR-AUTH-008 en spec-backend-01-auth).
-- **Notificaciones**: [NEEDS CLARIFICATION: ¿las notificaciones son solo dentro de la plataforma (in-app) o también por correo electrónico? Esto depende de la infraestructura disponible.]
-- **Cambio de estado "confirmado"**: ¿Un match "aceptado" puede pasar a "rechazado" posteriormente? [NEEDS CLARIFICATION: el MVP spec menciona estados sugerido/interesado/confirmado/rechazado pero no especifica si "confirmado" es un estado final o reversible.]
+- **Notificaciones**: Las notificaciones se envían tanto dentro de la plataforma (in-app, persistidas en base de datos) como por correo electrónico.
+- **Cambio de estado "aceptado"**: Un match en estado "aceptado" es irreversible y constituye un estado final. No puede pasar a "rechazado" posteriormente.
 
 ## Requirements *(mandatory)*
 
@@ -104,9 +104,9 @@ Como usuario, quiero ver una lista de todos mis matches (enviados y recibidos) c
 - **FR-INT-002**: El sistema MUST permitir a un responsable de proyecto marcar "me interesa" sobre un estudiante recomendado mediante `POST /api/matches`, creando un registro de Match con estado "interesado".
 - **FR-INT-003**: El sistema MUST evitar la creación de matches duplicados entre el mismo estudiante y proyecto (máximo un Match por par).
 - **FR-INT-004**: El sistema MUST permitir al receptor de un match "interesado" aceptarlo mediante `POST /api/matches/{id}/accept` (estado → "aceptado") o rechazarlo mediante `POST /api/matches/{id}/reject` (estado → "rechazado").
-- **FR-INT-005**: El sistema MUST excluir de futuras recomendaciones los pares (estudiante, proyecto) que tengan un match en estado "rechazado", a menos que los datos del estudiante o del proyecto hayan cambiado significativamente [NEEDS CLARIFICATION: definir "cambio significativo"].
-- **FR-INT-006**: El sistema MUST notificar a la parte receptora cuando se crea un nuevo match "interesado". La notificación se retorna en la respuesta JSON. Notificación in-app persistida en base de datos (entidad Notification). [NEEDS CLARIFICATION: ¿también notificación por correo electrónico? Depende de infraestructura de email.]
-- **FR-INT-007**: El sistema MUST notificar a la parte iniciadora cuando su match es aceptado o rechazado. La notificación se retorna en la respuesta JSON. Notificación in-app persistida en base de datos (entidad Notification). [NEEDS CLARIFICATION: ¿también notificación por correo electrónico?]
+- **FR-INT-005**: El sistema MUST excluir de futuras recomendaciones los pares (estudiante, proyecto) que tengan un match en estado "rechazado", a menos que los datos del estudiante o del proyecto hayan cambiado significativamente. Se considera cambio significativo: modificación de habilidades del estudiante, modificación de habilidades requeridas del proyecto, o cambio de disponibilidad.
+- **FR-INT-006**: El sistema MUST notificar a la parte receptora cuando se crea un nuevo match "interesado". La notificación se retorna en la respuesta JSON y se persiste en base de datos (entidad Notification). Adicionalmente, se envía notificación por correo electrónico al receptor.
+- **FR-INT-007**: El sistema MUST notificar a la parte iniciadora cuando su match es aceptado o rechazado. La notificación se retorna en la respuesta JSON y se persiste en base de datos (entidad Notification). Adicionalmente, se envía notificación por correo electrónico al iniciador.
 - **FR-INT-008**: El sistema MUST permitir a cada usuario ver el historial de sus matches (enviados y recibidos) mediante `GET /api/matches`, con estado y fecha de cada uno.
 - **FR-INT-009**: El sistema MUST registrar la fecha y hora de cada cambio de estado del match (created_at, updated_at, responded_at).
 - **FR-INT-010**: El sistema MUST aplicar el principio de supervisión humana (FR-011 del MVP spec): ningún match "aceptado" genera acciones automáticas; la conexión es una sugerencia que ambas partes deben revisar.

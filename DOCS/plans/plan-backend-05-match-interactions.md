@@ -143,8 +143,9 @@ src/main/resources/
 ## Notes
 
 - Unicidad de Match garantizada por UNIQUE constraint en DB (via Flyway migration) y verificación en servicio
-- Notificaciones solo in-app (entidad persistida). [NEEDS CLARIFICATION: ¿email? No implementado en MVP]
+- Notificaciones in-app (entidad Notification persistida) y por correo electrónico.
 - MatchScore se almacena en Match.matchScore como snapshot del puntaje al momento de la interacción
-- [NEEDS CLARIFICATION]: ¿Los matches INTERESADO expiran? No implementado en MVP; quedan abiertos indefinidamente
-- [NEEDS CLARIFICATION]: ¿Match ACEPTADO puede revertirse a RECHAZADO? No especificado; asumimos que ACEPTADO es estado final
+- Los matches en estado INTERESADO no expiran; quedan abiertos indefinidamente hasta que el receptor actúe.
+- Match ACEPTADO es estado final e irreversible. No puede revertirse a RECHAZADO.
+- Al aceptar un match, se comparten datos de contacto (nombre completo y correo electrónico de ambas partes).
 - Clean code: meaningful names, small methods, SRP. No dead code, no commented-out code.

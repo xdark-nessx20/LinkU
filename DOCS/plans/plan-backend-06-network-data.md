@@ -114,3 +114,4 @@ src/main/java/com/unimag/match/
 - Los nodos de estudiantes se incluyen solo si tienen al menos un match ACEPTADO (sin nodos aislados).
 - Peso intra-facultad (matches entre estudiantes de la misma facultad): se incluye como arista con source=target=facultad, weight=count.
 - Graph data served via REST endpoint GET /api/network/graph as JSON. Faculty stats at GET /api/network/faculty-stats.
+- Clean code: meaningful names, small methods, SRP. No dead code, no commented-out code.

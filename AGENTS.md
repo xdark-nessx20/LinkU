@@ -47,6 +47,7 @@ The project is in planning phase with docs in `DOCS/`.
 - Specs use Gherkin-style acceptance scenarios (Given/When/Then).
 - Stories are prioritized P1–P3 and must be independently testable.
 - Spec template requires `NEEDS CLARIFICATION` markers for unresolved decisions.
+- Clean Code: meaningful names, small methods, SRP, no dead code, no commented-out code, tests as documentation.
 
 ## Before writing code
 - Resolve remaining `[NEEDS CLARIFICATION]` items in the specs.

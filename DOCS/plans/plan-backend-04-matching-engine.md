@@ -169,3 +169,4 @@ src/main/resources/
 - [NEEDS CLARIFICATION]: Experiencia previa "relacionada" usa matching de palabras clave simple en MVP. Mejorar en fase post-piloto.
 - MatchScore se persiste para auditoría y rendimiento. Se borra y recalcula ante cambios relevantes.
 - Rankings via REST endpoints GET /api/recommendations/student/{id} y GET /api/recommendations/project/{id}. Respuestas JSON.
+- Clean code: meaningful names, small methods, SRP. No dead code, no commented-out code.

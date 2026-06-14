@@ -142,3 +142,4 @@ src/main/resources/
 - SkillCategory seed data loaded via Flyway migration V2__create_skill_categories.sql
 - [NEEDS CLARIFICATION]: Taxonomía de habilidades — se asume 8 categorías fijas del documento UNIMAG Match como seed data. Si se requiere administración dinámica, se necesita UI de administración (fuera de MVP).
 - Directorio de perfiles: REST endpoint GET /api/profiles con query params. Respuesta JSON paginada.
+- Clean code: meaningful names, small methods, SRP. No dead code, no commented-out code.

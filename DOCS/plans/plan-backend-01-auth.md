@@ -162,3 +162,4 @@ src/test/java/com/unimag/match/
 - Errores de API retornados como JSON con códigos HTTP apropiados (400, 401, 409, etc.)
 - Flyway migrations handle schema creation (no data.sql for DDL)
 - [NEEDS CLARIFICATION]: US3 depende de decisión sobre infraestructura de email
+- Clean code: meaningful names, small methods, SRP. No dead code, no commented-out code.

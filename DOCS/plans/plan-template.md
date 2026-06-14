@@ -234,6 +234,7 @@ Examples of foundational tasks (adjust based on your project):
 - Each user story should be independently completable and testable
 - All controllers return `Mono<ResponseEntity<T>>` (WebFlux reactive)
 - No Thymeleaf, no server-rendered pages — 100% REST API
+- Clean code practices throughout: meaningful names, small methods, SRP, no dead code, no commented-out code
 - Verify tests pass
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently

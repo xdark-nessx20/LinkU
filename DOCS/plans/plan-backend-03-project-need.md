@@ -129,3 +129,4 @@ src/main/resources/
 - isActive=true por defecto; proyectos inactivos excluidos de matching engine (plan-backend-04) y directorio.
 - updatedAt se actualiza automáticamente en cada update (via R2DBC audit o manual).
 - Directorio de proyectos: REST endpoint GET /api/projects con query params. Respuesta JSON.
+- Clean code: meaningful names, small methods, SRP. No dead code, no commented-out code.

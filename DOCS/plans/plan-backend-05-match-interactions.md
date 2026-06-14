@@ -147,3 +147,4 @@ src/main/resources/
 - MatchScore se almacena en Match.matchScore como snapshot del puntaje al momento de la interacción
 - [NEEDS CLARIFICATION]: ¿Los matches INTERESADO expiran? No implementado en MVP; quedan abiertos indefinidamente
 - [NEEDS CLARIFICATION]: ¿Match ACEPTADO puede revertirse a RECHAZADO? No especificado; asumimos que ACEPTADO es estado final
+- Clean code: meaningful names, small methods, SRP. No dead code, no commented-out code.

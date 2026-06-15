@@ -44,6 +44,65 @@ src/main/resources/
 │   └── V4__create_projects.sql        # Flyway migration
 ```
 
+## Clean Code Guidelines
+
+### Naming & Style
+- **Clases/Interfaces**: `PascalCase` — `ProjectService`, `ProjectRepository`, `ProjectRestController`, `R2dbcProjectRepository`
+- **Métodos**: `camelCase` — `createProject()`, `updateProject()`, `toggleActive()`, `findByOwnerId()`, `findByIsActiveTrueWithFilters()`
+- **Constantes**: `UPPER_SNAKE_CASE` — `DEFAULT_PAGE_SIZE`, `MAX_PROJECT_NAME_LENGTH`, `REQUIRED_CREATION_FIELDS`
+- **Paquetes**: `lowercase` sin guiones — `com.unimag.match.domain.model`, `com.unimag.match.application.dto`
+- **DTOs**: Sufijo explícito — `ProjectRequest` (request de creación/edición), `ProjectResponse` (JSON respuesta individual), `ProjectPageResponse` (paginación)
+
+### Single Responsibility
+- Cada clase debe tener UNA razón para cambiar
+- **Controllers**: Solo HTTP — `ProjectRestController` parsea requests, verifica ownership, delega a `ProjectService`, retorna `Mono<ResponseEntity<T>>`
+- **Services**: Solo lógica de negocio — `ProjectService` maneja CRUD de proyectos, toggle activo/inactivo, validación de ownership; nunca accede a HTTP ni a DB directamente
+- **Repositories**: Solo acceso a datos — `ProjectRepository` expone `findByOwnerId`, `findAllActive` con filtros (facultad, habilidad) y paginación
+- **Domain/Entities**: Solo datos y validaciones básicas — `Project` encapsula name, description, isActive, requiredSkills y lógica de activación
+- Si una clase supera ~300 líneas, extraer responsabilidades (ej. `ProjectOwnershipValidator` separado de `ProjectService`)
+- Separar paquetes por dominio: `project` agrupa model, service, dto de proyectos; no mezclar con profile o match
+
+### Métodos limpios
+- Máximo ~30 líneas por método; extraer bloques lógicos a métodos privados con nombre descriptivo (ej. `validateOwnership`, `buildProjectResponse`)
+- **Guard clauses al inicio**: `if (project == null) throw new ProjectNotFoundException(…)` — retornar o lanzar temprano
+- Un solo nivel de abstracción por método: no mezclar validación de ownership con mapeo de DTO en `update()`
+- Evitar más de 3 niveles de indentación; usar `Optional`, `Stream` o métodos auxiliares para filtros de skills
+- Métodos de consulta (`findByOwnerId`, `findAllActive`) deben ser side-effect-free; métodos de comando (`create`, `update`, `toggleActive`) deben documentar el efecto
+
+### Principios SOLID
+- **S**: Single Responsibility (ver arriba)
+- **O**: Abierto a extensión (interfaz `ProjectRepository` port permite nuevas queries de filtro), cerrado a modificación
+- **L**: Sustitución de Liskov — `R2dbcProjectRepository` debe ser 100% intercambiable con `ProjectRepository` port
+- **I**: Interfaces específicas por cliente — `ProjectRepository` solo expone queries del contexto project; no forzar métodos de match o network
+- **D**: Depender de abstracciones, no implementaciones — `ProjectService` recibe `ProjectRepository` (interfaz), no `R2dbcProjectRepository`
+
+### Spring-Specific
+- **Inyección por constructor** (no `@Autowired` en campos) — dependencias explícitas e inmutables en `ProjectService`, `ProjectRestController`
+- `@ConfigurationProperties` para configuración de paginación (`project.page-size`); nunca hardcodear
+- **Eventos de Spring** (`ApplicationEventPublisher`) para publicar `ProjectUpdatedEvent` que gatille recálculo de matching (plan-04) cuando cambian skills o isActive
+- `@Transactional` solo en services, con `readOnly = true` en consultas (`listDirectory`, `getById`); escritura en `create`, `update`, `toggleActive`
+- `@RestControllerAdvice` + `@ExceptionHandler` para manejo centralizado de errores HTTP de proyectos
+- `Bean Validation` (`@Valid`, `@NotBlank`, `@Size`) en `ProjectRequest`; no en `Project` entity
+
+### Manejo de errores
+- Lanzar excepciones específicas de dominio: `ProjectNotFoundException`, `UnauthorizedProjectAccessException`, `InvalidProjectStateException`, `ValidationException`
+- `@ExceptionHandler` traduce excepciones de dominio a códigos HTTP: `ProjectNotFoundException` → 404, `UnauthorizedProjectAccessException` → 403, `ValidationException` → 400
+- Nunca exponer stack traces al cliente; loggear internamente con `log.error()`, retornar mensaje amigable en JSON
+- Usar `Mono.error()` para flujos reactivos de error predecibles en `ProjectService`
+- Validar precondiciones al inicio del método con guard clauses: nombre no vacío, ownership verificado, proyecto existente
+
+### Valores configurables
+- Tamaño de página por defecto, campos obligatorios para creación en `application.yml` bajo `project.*`
+- Usar `@ConfigurationProperties` para agrupar configuraciones de proyecto (`ProjectProperties`)
+- Perfiles (`application-dev.yml`, `application-prod.yml`) para separar configuraciones por entorno
+- NUNCA hardcodear números mágicos (page size), URLs de API o valores por defecto de isActive en el código fuente
+
+### Testing (si aplica)
+- Tests nombrados `should_expectedBehavior_when_condition()` — `should_toggleActiveFalse_when_projectIsActive()`
+- AAA: Arrange → Act → Assert, sin mezclar fases
+- Un test = un concepto; mockear solo dependencias externas (`ProjectRepository`), no `ProjectService`
+- `@SpringBootTest` solo para integración (POST /api/projects, GET /api/projects); unitarios con Mockito puro
+
 ## Phase 1: Setup
 
 - [ ] T001 Verify dependencies and existing entities (User, SkillCategory) are accessible

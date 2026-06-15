@@ -47,6 +47,65 @@ src/test/java/com/unimag/match/
 └── ...
 ```
 
+## Clean Code Guidelines
+
+### Naming & Style
+- **Clases/Interfaces**: `PascalCase` — `UserService`, `UserRepository`, `SecurityConfig`, `AuthRestController`
+- **Métodos**: `camelCase` — `register()`, `authenticate()`, `findByEmail()`, `deleteAccount()`
+- **Constantes**: `UPPER_SNAKE_CASE` — `JWT_EXPIRATION_HOURS`, `BCRYPT_STRENGTH`, `DEFAULT_ROLE`
+- **Paquetes**: `lowercase` sin guiones — `com.unimag.match.domain.model`, `com.unimag.match.application.service`
+- **DTOs**: Sufijo explícito — `RegistrationForm` (request de registro), `LoginRequest`, `AuthResponse`, `PasswordRecoveryRequest`
+
+### Single Responsibility
+- Cada clase debe tener UNA razón para cambiar
+- **Controllers**: Solo HTTP — `AuthRestController` parsea requests, delega a `UserService`, retorna `Mono<ResponseEntity<T>>`
+- **Services**: Solo lógica de negocio — `UserService` maneja registro, autenticación, eliminación; nunca accede a HTTP ni a la base de datos directamente
+- **Repositories**: Solo acceso a datos — `UserRepository` expone `findByEmail`, `existsByEmail`; sin lógica de negocio
+- **Domain/Entities**: Solo datos y validaciones básicas — `User` encapsula email, passwordHash, role, consentGiven; comportamiento de verificación de contraseña en el domain
+- Si una clase supera ~300 líneas, extraer responsabilidades a una clase delegada (ej. `PasswordRecoveryService` separado de `UserService`)
+- Separar paquetes por dominio (feature-based): `auth` agrupa model, service, dto de autenticación
+
+### Métodos limpios
+- Máximo ~30 líneas por método; extraer bloques lógicos a métodos privados con nombre descriptivo (ej. `validateRegistrationForm`, `hashPassword`)
+- **Guard clauses al inicio**: `if (email == null) throw new ValidationException(…)` — retornar o lanzar temprano
+- Un solo nivel de abstracción por método: no mezclar validación de entrada con lógica de negocio en `register()`
+- Evitar más de 3 niveles de indentación; usar `Optional`, `Stream` o métodos auxiliares
+- Métodos de consulta (`findByEmail`) deben ser side-effect-free; métodos de comando (`register`, `deleteAccount`) deben documentar el efecto
+
+### Principios SOLID
+- **S**: Single Responsibility (ver arriba)
+- **O**: Abierto a extensión (interfaz `UserRepository` port), cerrado a modificación (no tocar implementación R2DBC desde services)
+- **L**: Sustitución de Liskov — `R2dbcUserRepository` debe ser 100% intercambiable con `UserRepository` port
+- **I**: Interfaces específicas por cliente — `UserRepository` solo expone queries necesarias para auth; no forzar métodos de otros contextos
+- **D**: Depender de abstracciones, no implementaciones — `UserService` recibe `UserRepository` (interfaz), no `R2dbcUserRepository`
+
+### Spring-Specific
+- **Inyección por constructor** (no `@Autowired` en campos) — dependencias explícitas e inmutables en `UserService`, `AuthRestController`, `SecurityConfig`
+- `@ConfigurationProperties` para valores de JWT (`jwt.expiration`, `jwt.secret`); `@Value` para propiedades simples; nunca hardcodear
+- **Eventos de Spring** (`ApplicationEventPublisher`) para notificar `UserRegisteredEvent`, `UserDeletedEvent` a otros bounded contexts (ej. crear perfil automático)
+- `@Transactional` solo en services, con `readOnly = true` en consultas (`findByEmail`), sin propagación innecesaria
+- `@RestControllerAdvice` + `@ExceptionHandler` para manejo centralizado de errores HTTP de autenticación
+- `Bean Validation` (`@Valid`, `@Email`, `@NotBlank`, `@Size`) en `RegistrationForm`, `LoginRequest`; no en `User` entity
+
+### Manejo de errores
+- Lanzar excepciones específicas de dominio: `DuplicateEmailException`, `InvalidCredentialsException`, `ConsentRequiredException`, `AccountNotFoundException`
+- `@ExceptionHandler` traduce excepciones de dominio a códigos HTTP: `DuplicateEmailException` → 409, `InvalidCredentialsException` → 401, `ConsentRequiredException` → 400
+- Nunca exponer stack traces al cliente; loggear internamente con `log.error()`, retornar mensaje amigable en JSON `{"error": "..."}`
+- Usar `Mono.error()` para flujos reactivos de error predecibles en `UserService`
+- Validar precondiciones al inicio del método con guard clauses: contraseña no vacía, email válido, consentGiven=true
+
+### Valores configurables
+- JWT expiration (6h), refresh token expiration (7d), BCrypt strength en `application.yml` bajo `jwt.*` y `security.*`
+- Usar `@ConfigurationProperties` para agrupar configuraciones JWT (`JwtProperties`) y CORS (`CorsProperties`)
+- Perfiles (`application-dev.yml`, `application-prod.yml`) para separar configuraciones por entorno (ej. secret key diferente en prod)
+- NUNCA hardcodear secretos JWT, URLs de CORS, tiempos de expiración o credenciales SMTP en el código fuente
+
+### Testing (si aplica)
+- Tests nombrados `should_expectedBehavior_when_condition()` — `should_throwDuplicateEmailException_when_emailAlreadyExists()`
+- AAA: Arrange → Act → Assert, sin mezclar fases
+- Un test = un concepto; mockear solo dependencias externas (`UserRepository`), no el sistema bajo prueba (`UserService`)
+- `@SpringBootTest` solo para integración (POST /register, POST /login); unitarios con Mockito puro (`@ExtendWith(MockitoExtension.class)`)
+
 ## Phase 1: Setup (Shared Infrastructure)
 
 - [ ] T001 Create Spring Boot project with Gradle (Spring WebFlux, Security, Data R2DBC, PostgreSQL, Lombok, Validation, Flyway)

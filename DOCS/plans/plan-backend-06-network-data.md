@@ -37,10 +37,70 @@ src/main/java/com/unimag/match/
 │       └── FacultyStatsDto.java        # { faculty, studentCount, projectCount, topSkills }
 └── infrastructure/
     ├── persistence/
-    │   └── (existing R2DBC adapters with added query methods)
+    │       └── (existing R2DBC adapters with added query methods)
     └── web/
         └── NetworkRestController.java  # @RestController: GET /api/network/graph, GET /api/network/faculty-stats
 ```
+
+## Clean Code Guidelines
+
+### Naming & Style
+- **Clases/Interfaces**: `PascalCase` — `NetworkService`, `GraphDataBuilder`, `NetworkRestController`, `GraphDataDto`, `FacultyStatsDto`
+- **Métodos**: `camelCase` — `buildGraphData()`, `getFacultyAggregations()`, `countMatchesByFacultyPair()`, `findMatchesByFaculty()`
+- **Constantes**: `UPPER_SNAKE_CASE` — `WEIGHT_BAJA_MIN`, `WEIGHT_MEDIA_MIN`, `WEIGHT_ALTA_MIN`, `TOP_SKILLS_LIMIT`
+- **Paquetes**: `lowercase` sin guiones — `com.unimag.match.domain.service`, `com.unimag.match.application.dto`
+- **DTOs**: Sufijo explícito — `GraphDataDto` (contenedor de nodos y aristas), `GraphNodeDto` (nodo individual), `GraphEdgeDto` (arista), `FacultyStatsDto` (estadísticas de facultad)
+
+### Single Responsibility
+- Cada clase debe tener UNA razón para cambiar
+- **Controllers**: Solo HTTP — `NetworkRestController` recibe peticiones de grafo/estadísticas, delega a `NetworkService`, retorna `Mono<ResponseEntity<T>>`
+- **Services**: Solo lógica de negocio — `NetworkService` orquesta la construcción del grafo y agregaciones; `GraphDataBuilder` (domain service) encapsula la lógica pura de transformación de matches a nodos/aristas; nunca acceden a HTTP ni a DB directamente
+- **Repositories**: Solo acceso a datos — se añaden queries personalizadas a `MatchRepository` y `StudentProfileRepository` existentes; sin lógica de agregación ni construcción de grafo
+- **Domain/Entities**: (Sin nuevas entities — se reutilizan `Match`, `StudentProfile`, `Project` de planes anteriores)
+- Si una clase supera ~300 líneas, extraer responsabilidades (ej. `FacultyAggregationCalculator` separado de `NetworkService`)
+- Separar paquetes por dominio: `network` agrupa service, dto; `GraphDataBuilder` en `domain/service` por ser lógica de dominio pura
+
+### Métodos limpios
+- Máximo ~30 líneas por método; extraer bloques lógicos a métodos privados con nombre descriptivo (ej. `buildStudentNodes`, `buildFacultyNodes`, `buildMatchEdges`, `calculateInterFacultyWeights`, `mapWeightToIntensity`)
+- **Guard clauses al inicio**: `if (acceptedMatches.isEmpty()) return GraphDataDto.empty()` — retornar temprano en caso de grafo vacío
+- Un solo nivel de abstracción por método: `buildGraphData` orquesta la construcción de nodos y aristas, delegando cada tipo a su método específico; no mezcla construcción de nodos con cálculo de pesos
+- Evitar más de 3 niveles de indentación; usar `Stream` para transformar colecciones de matches en nodos/aristas y `groupingBy` para agregaciones
+- Métodos de consulta deben ser side-effect-free (el grafo se calcula on-the-fly, no se persiste); `buildGraphData` es idempotente dado el mismo estado de matches
+
+### Principios SOLID
+- **S**: Single Responsibility (ver arriba)
+- **O**: Abierto a extensión — `GraphDataBuilder` como interfaz de dominio permite nuevas estrategias de construcción de grafo sin modificar `NetworkService`
+- **L**: Sustitución de Liskov — cualquier implementación de `GraphDataBuilder` debe ser intercambiable sin afectar `NetworkService`
+- **I**: Interfaces específicas por cliente — queries personalizadas en `MatchRepository` solo para network; no forzar métodos de otros contextos
+- **D**: Depender de abstracciones, no implementaciones — `NetworkService` depende de `GraphDataBuilder` (interfaz) y repositories (interfaces), no de implementaciones concretas
+
+### Spring-Specific
+- **Inyección por constructor** (no `@Autowired` en campos) — dependencias explícitas e inmutables en `NetworkService`, `NetworkRestController`, `GraphDataBuilder`
+- `@ConfigurationProperties` para configuración de umbrales de peso (`network.weights.baja-min=1`, `network.weights.media-min=3`, `network.weights.alta-min=6`); nunca hardcodear
+- **Eventos de Spring** — este módulo es consumidor de datos; no publica eventos pero consulta el estado actual de matches (solo ACEPTADOS)
+- `@Transactional` con `readOnly = true` en todos los métodos de `NetworkService` (solo lectura, el grafo no se persiste)
+- `@RestControllerAdvice` + `@ExceptionHandler` para manejo centralizado de errores HTTP (aunque es improbable que falle siendo solo lectura)
+
+### Manejo de errores
+- Lanzar excepciones específicas de dominio: `GraphBuildException` (error inesperado al construir el grafo)
+- `@ExceptionHandler` traduce excepciones a códigos HTTP: `GraphBuildException` → 500
+- Nunca exponer stack traces al cliente; loggear internamente con `log.error()`, retornar mensaje amigable en JSON
+- El grafo vacío (sin matches ACEPTADOS) no es un error: retornar 200 con arrays JSON vacíos `{"nodes": [], "edges": []}`
+- Validar precondiciones al inicio del método con guard clauses: datos de entrada consistentes, matches con perfiles y proyectos existentes
+
+### Valores configurables
+- Umbrales de intensidad de peso inter-facultad: `network.weights.baja-min=1`, `network.weights.media-min=3`, `network.weights.alta-min=6`
+- Límite de top skills por facultad: `network.top-skills-limit=5`
+- Usar `@ConfigurationProperties(prefix = "network")` para agrupar todas las configuraciones de red
+- Perfiles (`application-dev.yml`, `application-prod.yml`) para ajustar umbrales por entorno sin recompilar
+- NUNCA hardcodear umbrales de peso (BAJA/MEDIA/ALTA), límites de skills, o URLs de API en el código fuente
+
+### Testing (si aplica)
+- Tests nombrados `should_expectedBehavior_when_condition()` — `should_includeOnlyAcceptedMatches_when_buildingGraph()`, `should_returnEmptyGraph_when_noAcceptedMatches()`, `should_calculateInterFacultyWeight_when_matchesBetweenFaculties()`
+- AAA: Arrange → Act → Assert, sin mezclar fases
+- Un test = un concepto; mockear solo dependencias externas (`MatchRepository`, `StudentProfileRepository`), no `NetworkService` ni `GraphDataBuilder`
+- `@SpringBootTest` solo para integración (GET /api/network/graph, GET /api/network/faculty-stats); unitarios con Mockito puro
+- Probar construcción de grafo con fixtures de datos controlados: matches ACEPTADOS, RECHAZADOS, y sin matches
 
 ## Phase 1: Setup
 

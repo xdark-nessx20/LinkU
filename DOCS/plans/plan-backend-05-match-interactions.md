@@ -48,6 +48,66 @@ src/main/resources/
 │   └── V7__create_notifications.sql  # Flyway migration
 ```
 
+## Clean Code Guidelines
+
+### Naming & Style
+- **Clases/Interfaces**: `PascalCase` — `MatchService`, `NotificationService`, `MatchRepository`, `NotificationRepository`, `MatchRestController`, `NotificationRestController`
+- **Métodos**: `camelCase` — `expressInterest()`, `acceptMatch()`, `rejectMatch()`, `getMatchHistory()`, `createNotification()`, `markAsRead()`, `getUnreadCount()`
+- **Constantes**: `UPPER_SNAKE_CASE` — `MATCH_STATUS_SUGERIDO`, `MATCH_STATUS_INTERESADO`, `MATCH_STATUS_ACEPTADO`, `MATCH_STATUS_RECHAZADO`
+- **Paquetes**: `lowercase` sin guiones — `com.unimag.match.domain.model`, `com.unimag.match.application.dto`
+- **DTOs**: Sufijo explícito — `MatchRequest` (request para expresar interés), `MatchResponse` (respuesta JSON con estado y datos), `NotificationResponse`
+
+### Single Responsibility
+- Cada clase debe tener UNA razón para cambiar
+- **Controllers**: Solo HTTP — `MatchRestController` parsea requests de interacción, delega a `MatchService`; `NotificationRestController` maneja endpoints de notificaciones; retornan `Mono<ResponseEntity<T>>`
+- **Services**: Solo lógica de negocio — `MatchService` maneja ciclo de vida del match (expresar interés, aceptar, rechazar), validación de estados; `NotificationService` maneja creación, lectura y consulta de notificaciones; nunca acceden a HTTP ni a DB directamente
+- **Repositories**: Solo acceso a datos — `MatchRepository` expone `findByStudentId`, `findByProjectId`, `findByStudentAndProject`; `NotificationRepository` expone `findByUserId`, `countUnreadByUserId`
+- **Domain/Entities**: Solo datos y validaciones básicas — `Match` encapsula estado, transiciones permitidas (`canAccept`, `canReject`); `Notification` encapsula tipo, mensaje, isRead
+- Si una clase supera ~300 líneas, extraer responsabilidades (ej. `MatchStateValidator` separado de `MatchService`)
+- Separar paquetes por dominio: `match` agrupa model, service, dto de matches; `notification` para notificaciones
+
+### Métodos limpios
+- Máximo ~30 líneas por método; extraer bloques lógicos a métodos privados con nombre descriptivo (ej. `validateStateTransition`, `determineNotificationRecipient`, `buildMatchResponse`)
+- **Guard clauses al inicio**: `if (existingMatch != null) throw new DuplicateMatchException(…)` — retornar o lanzar temprano
+- Un solo nivel de abstracción por método: `expressInterest` valida unicidad, crea Match, determina destinatario y crea notificación; delega cada paso a métodos privados
+- Evitar más de 3 niveles de indentación; usar `Optional` para búsquedas y validaciones de estado
+- Métodos de consulta (`getHistory`, `getUnreadCount`) deben ser side-effect-free; métodos de comando (`expressInterest`, `accept`, `reject`) deben documentar el efecto y las transiciones de estado
+
+### Principios SOLID
+- **S**: Single Responsibility (ver arriba)
+- **O**: Abierto a extensión — `MatchStatus` como enum con comportamiento de transiciones permite agregar nuevos estados sin modificar `MatchService`; estrategia de notificación extensible
+- **L**: Sustitución de Liskov — `R2dbcMatchRepository` debe ser 100% intercambiable con `MatchRepository` port
+- **I**: Interfaces específicas por cliente — `MatchRepository` solo queries de match; `NotificationRepository` solo queries de notificación; no mezclar responsabilidades
+- **D**: Depender de abstracciones, no implementaciones — `MatchService` recibe `MatchRepository` y `NotificationService` (interfaces), no implementaciones concretas
+
+### Spring-Specific
+- **Inyección por constructor** (no `@Autowired` en campos) — dependencias explícitas e inmutables en `MatchService`, `NotificationService`, ambos controllers
+- `@ConfigurationProperties` para configuración de notificaciones (`notification.*`); nunca hardcodear
+- **Eventos de Spring** (`ApplicationEventPublisher`) para publicar `MatchAcceptedEvent` que notifique a otros bounded contexts (ej. compartir datos de contacto, actualizar grafo en plan-06)
+- `@Transactional` solo en services, con `readOnly = true` en consultas (`getHistory`, `getUnreadCount`); escritura en `expressInterest`, `accept`, `reject`, `markAsRead`
+- `@RestControllerAdvice` + `@ExceptionHandler` para manejo centralizado de errores HTTP de interacciones
+- `Bean Validation` (`@Valid`, `@NotNull`) en `MatchRequest`; no en `Match` entity
+
+### Manejo de errores
+- Lanzar excepciones específicas de dominio: `DuplicateMatchException`, `InvalidStateException` (transición no permitida), `UnauthorizedMatchActionException`, `MatchNotFoundException`
+- `@ExceptionHandler` traduce excepciones de dominio a códigos HTTP: `DuplicateMatchException` → 409, `InvalidStateException` → 400, `UnauthorizedMatchActionException` → 403, `MatchNotFoundException` → 404
+- Nunca exponer stack traces al cliente; loggear internamente con `log.error()`, retornar mensaje amigable en JSON `{"error": "Ya existe una interacción con este proyecto"}`
+- Usar `Mono.error()` para flujos reactivos de error predecibles en `MatchService`
+- Validar precondiciones al inicio del método con guard clauses: match existente, estado válido para la transición, actor autorizado
+
+### Valores configurables
+- Configuraciones de notificación, timeouts de match (si aplican) en `application.yml` bajo `match.*` y `notification.*`
+- Usar `@ConfigurationProperties` para agrupar configuraciones de match (`MatchProperties`) y notificación (`NotificationProperties`)
+- Perfiles (`application-dev.yml`, `application-prod.yml`) para separar configuraciones por entorno (ej. emails de notificación en prod)
+- NUNCA hardcodear mensajes de notificación, URLs de redirect, timeouts o tipos de notificación en el código fuente
+
+### Testing (si aplica)
+- Tests nombrados `should_expectedBehavior_when_condition()` — `should_throwDuplicateMatchException_when_matchAlreadyExists()`, `should_throwInvalidStateException_when_acceptingNonInterestedMatch()`
+- AAA: Arrange → Act → Assert, sin mezclar fases
+- Un test = un concepto; mockear solo dependencias externas (`MatchRepository`, `NotificationService`), no `MatchService`
+- `@SpringBootTest` solo para integración (POST /api/matches, POST /api/matches/{id}/accept); unitarios con Mockito puro para transiciones de estado
+- Probar cada transición de estado (`INTERESADO → ACEPTADO`, `INTERESADO → RECHAZADO`) y transiciones inválidas de forma aislada
+
 ## Phase 1: Setup
 
 - [ ] T001 Create V6__create_matches.sql Flyway migration (id, student_id FK, project_id FK, status, initiated_by, match_score, created_at, updated_at, UNIQUE(student_id, project_id))

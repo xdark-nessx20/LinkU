@@ -50,6 +50,67 @@ src/main/resources/
 └── application.properties            # matching.weights.skill=30, etc.
 ```
 
+## Clean Code Guidelines
+
+### Naming & Style
+- **Clases/Interfaces**: `PascalCase` — `MatchingService`, `MatchingScorer`, `MatchScoreRepository`, `MatchingRestController`, `MatchingConfig`
+- **Métodos**: `camelCase` — `calculateMatch()`, `calculateForStudent()`, `calculateForProject()`, `getRecommendations()`, `normalizeScore()`
+- **Constantes**: `UPPER_SNAKE_CASE` — `MIN_VISIBILITY_THRESHOLD`, `SCORE_SCALE_MAX`, `DEFAULT_WEIGHT_SKILL`
+- **Paquetes**: `lowercase` sin guiones — `com.unimag.match.domain.service`, `com.unimag.match.application.dto`
+- **DTOs**: Sufijo explícito — `RecommendationResponse` (respuesta JSON con score y factores), `ScoreBreakdownDto` (desglose de factores)
+
+### Single Responsibility
+- Cada clase debe tener UNA razón para cambiar
+- **Controllers**: Solo HTTP — `MatchingRestController` recibe peticiones de rankings, delega a `MatchingService`, retorna `Mono<ResponseEntity<List<RecommendationResponse>>>`
+- **Services**: Solo lógica de negocio — `MatchingService` orquesta el cálculo de scores, normalización y filtrado; `MatchingScorer` (domain service) encapsula el algoritmo puro de puntuación por factor; nunca acceden a HTTP ni a DB directamente
+- **Repositories**: Solo acceso a datos — `MatchScoreRepository` persiste y consulta scores; no contiene lógica de cálculo
+- **Domain/Entities**: Solo datos y validaciones básicas — `MatchScore` encapsula score total, factores (JSONB) y relaciones a student/project
+- Si una clase supera ~300 líneas, extraer responsabilidades (ej. `ScoreNormalizer`, `TieBreakResolver` separados de `MatchingService`)
+- Separar paquetes por dominio: `matching` agrupa service, dto, config; `MatchingScorer` en `domain/service` por ser lógica de dominio pura
+
+### Métodos limpios
+- Máximo ~30 líneas por método; extraer bloques lógicos a métodos privados con nombre descriptivo (ej. `calculateSkillScore`, `calculateInterestScore`, `applyTieBreakRules`)
+- **Guard clauses al inicio**: `if (studentProfile == null) return Mono.just(Collections.emptyList())` — retornar o lanzar temprano
+- Un solo nivel de abstracción por método: `calculateMatch` delega a métodos por factor (skill, program, interest, experience, availability); no mezcla el cálculo de cada factor con la suma total
+- Evitar más de 3 niveles de indentación; usar `Stream` para iterar pares estudiante-proyecto y `Optional` para factores opcionales
+- Métodos de consulta (`findByStudentId`, `findByProjectId`) deben ser side-effect-free; métodos de comando (`calculateAll`, `deleteByStudentId`) deben documentar el efecto
+
+### Principios SOLID
+- **S**: Single Responsibility (ver arriba)
+- **O**: Abierto a extensión — `MatchingScorer` como interfaz de dominio permite nuevas estrategias de scoring sin modificar `MatchingService`; pesos configurables permiten ajustar sin recompilar
+- **L**: Sustitución de Liskov — cualquier implementación de `MatchingScorer` debe ser intercambiable sin afectar `MatchingService`
+- **I**: Interfaces específicas por cliente — `MatchScoreRepository` solo queries de score; `MatchingScorer` solo interfaz de cálculo
+- **D**: Depender de abstracciones, no implementaciones — `MatchingService` depende de `MatchingScorer` (interfaz) y `MatchScoreRepository` (interfaz), no de implementaciones concretas
+
+### Spring-Specific
+- **Inyección por constructor** (no `@Autowired` en campos) — dependencias explícitas e inmutables en `MatchingService`, `MatchingRestController`, `MatchingScorer`
+- `@ConfigurationProperties(prefix = "matching.weights")` para pesos de scoring (`skill`, `program`, `interest`, `experience`, `availability`); ajustables sin recompilar
+- `@ConfigurationProperties(prefix = "matching")` para umbral de visibilidad (`min-visibility-threshold=50`)
+- **Eventos de Spring** (`ApplicationEventPublisher`) para escuchar `ProfileUpdatedEvent` y `ProjectUpdatedEvent` que gatillen recálculo bajo demanda
+- `@Transactional` solo en services, con `readOnly = true` en consultas de rankings; escritura en `saveMatchScore`, `deleteByStudentId`
+- `@RestControllerAdvice` + `@ExceptionHandler` para manejo centralizado de errores HTTP del motor de matching
+
+### Manejo de errores
+- Lanzar excepciones específicas de dominio: `InsufficientDataException` (perfil sin skills/proyecto sin requerimientos), `CalculationException` (error en cómputo de score)
+- `@ExceptionHandler` traduce excepciones de dominio a códigos HTTP: `InsufficientDataException` → 200 con lista vacía (no es error), `CalculationException` → 500
+- Nunca exponer stack traces al cliente; loggear internamente con `log.error()`, retornar mensaje amigable en JSON
+- Usar `Mono.error()` o `Mono.just(emptyList())` según corresponda para flujos reactivos predecibles
+- Validar precondiciones al inicio del método: perfiles y proyectos existentes, datos suficientes para calcular score
+
+### Valores configurables
+- Pesos de scoring: `matching.weights.skill=30`, `matching.weights.program=15`, `matching.weights.interest=20`, `matching.weights.experience=20`, `matching.weights.availability=15`
+- Umbral mínimo de visibilidad: `matching.min-visibility-threshold=50` (50%)
+- Usar `@ConfigurationProperties` para agrupar todas las configuraciones de matching (`MatchingProperties` con subgrupo `WeightsProperties`)
+- Perfiles (`application-dev.yml`, `application-prod.yml`) para ajustar pesos y umbrales por entorno sin recompilar
+- NUNCA hardcodear pesos, umbrales, o fórmulas de normalización en el código fuente
+
+### Testing (si aplica)
+- Tests nombrados `should_expectedBehavior_when_condition()` — `should_returnSkillScore30_when_skillMatches()`, `should_returnZero_when_noMatches()`
+- AAA: Arrange → Act → Assert, sin mezclar fases
+- Un test = un concepto; mockear solo dependencias externas (`MatchScoreRepository`, repos de perfil/proyecto), no `MatchingScorer`
+- `@SpringBootTest` solo para integración (GET /api/recommendations/student/{id}); unitarios con Mockito puro para cada factor de scoring
+- Probar cada factor de scoring de forma aislada con datos de entrada controlados
+
 ## Phase 1: Setup
 
 - [ ] T001 Create V5__create_match_scores.sql Flyway migration with JSONB column for scoreFactors
